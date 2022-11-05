@@ -2,9 +2,9 @@ package infrastructure
 
 import (
 	"context"
-	"ddd-hexa/shared/domain"
 	"errors"
 
+	"github.com/carlosarismendi/dddhelper/shared/domain"
 	"gorm.io/gorm"
 )
 

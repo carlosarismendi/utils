@@ -1,4 +1,4 @@
-module ddd-hexa
+module github.com/carlosarismendi/dddhelper
 
 go 1.18
 

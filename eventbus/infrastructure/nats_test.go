@@ -1,11 +1,11 @@
 package infrastructure
 
 import (
-	"ddd-hexa/eventbus/domain"
 	"encoding/json"
 	"testing"
 	"time"
 
+	"github.com/carlosarismendi/dddhelper/eventbus/domain"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )

@@ -2,9 +2,9 @@ package infrastructure
 
 import (
 	"context"
-	"ddd-hexa/shared/domain"
 	"testing"
 
+	"github.com/carlosarismendi/dddhelper/shared/domain"
 	"github.com/stretchr/testify/require"
 )
 

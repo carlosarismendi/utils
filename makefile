@@ -5,7 +5,7 @@ down:
 	docker-compose down
 
 enterpg:
-	docker exec -it ddd-hexa_pg_1 psql --username "postgres"
+	docker exec -it dddhelper_pg_1 psql --username "postgres"
 	
 test:
 	go test ./...
