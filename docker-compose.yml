@@ -9,6 +9,6 @@ services:
     environment:      
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres  
-    volumes:
-      - ./migrations:/docker-entrypoint-initdb.d/
+    # volumes:
+    #   - ./migrations:/docker-entrypoint-initdb.d/
       
