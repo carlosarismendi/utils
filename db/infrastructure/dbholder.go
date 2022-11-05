@@ -3,6 +3,7 @@ package infrastructure
 import (
 	"fmt"
 
+	"github.com/caarlos0/env/v6"
 	"github.com/golang-migrate/migrate/v4"
 	migratePostgres "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -13,37 +14,49 @@ import (
 )
 
 type DBConfig struct {
-	Host         string
-	Port         string
-	User         string
-	Password     string
-	DatabaseName string
-	SchemaName   string
+	Host                 string `env:"POSTGRES_HOST" envDefault:"localhost"`
+	Port                 string `env:"POSTGRES_PORT" envDefault:"5432"`
+	User                 string `env:"POSTGRES_USER" envDefault:"postgres"`
+	Password             string `env:"POSTGRES_PASSWORD" envDefault:"postgres"`
+	DatabaseName         string `env:"POSTGRES_DATABASE" envDefault:"postgres"`
+	SchemaName           string `env:"POSTGRES_SCHEMA" envDefault:"public"`
+	MigrationsDir        string `env:"POSTGRES_MIGRATIONS_DIR" envDefault:"./migrations"`
+	RunMigrationsOnReset bool   `env:"POSTGRES_RUN_MIGRATIONS" envDefault:"false"`
+}
+
+func NewDBConfigFromEnv() *DBConfig {
+	cfg := DBConfig{}
+	if err := env.Parse(&cfg); err != nil {
+		panic(err)
+	}
+	return &cfg
 }
 
 func (c *DBConfig) checkValuesProvidedAndSetDefaults() {
+	def := NewDBConfigFromEnv()
+
 	if c.Host == "" {
-		c.Host = "localhost"
+		c.Host = def.Host
 	}
 
 	if c.Port == "" {
-		c.Port = "5432"
+		c.Port = def.Port
 	}
 
 	if c.User == "" {
-		c.User = "postgres"
+		c.User = def.User
 	}
 
 	if c.Password == "" {
-		c.Password = "postgres"
+		c.Password = def.Password
 	}
 
 	if c.DatabaseName == "" {
-		c.DatabaseName = "postgres"
+		c.DatabaseName = def.DatabaseName
 	}
 
 	if c.SchemaName == "" {
-		c.SchemaName = "public"
+		c.SchemaName = def.SchemaName
 	}
 }
 
@@ -60,8 +73,8 @@ func (c *DBConfig) getConnectionString() string {
 }
 
 type DBHolder struct {
-	schemaName string
-	db         *gorm.DB
+	config *DBConfig
+	db     *gorm.DB
 }
 
 func NewDBHolder(config *DBConfig) *DBHolder {
@@ -77,8 +90,8 @@ func NewDBHolder(config *DBConfig) *DBHolder {
 	}
 
 	dbHolder := &DBHolder{
-		schemaName: config.SchemaName,
-		db:         db,
+		config: config,
+		db:     db,
 	}
 
 	dbHolder.createSchema()
@@ -94,14 +107,14 @@ func (d *DBHolder) RunMigrations() {
 	}
 
 	config := migratePostgres.Config{
-		SchemaName: d.schemaName,
+		SchemaName: d.config.SchemaName,
 	}
 	driver, err := migratePostgres.WithInstance(db, &config)
 	if err != nil {
 		panic(err)
 	}
 	m, err := migrate.NewWithDatabaseInstance(
-		"file:/home/microservices/dev/ddd-hexa/migrations",
+		fmt.Sprintf("file:%s", d.config.MigrationsDir),
 		"postgres", driver)
 	if err != nil {
 		panic(err)
@@ -116,14 +129,17 @@ func (d *DBHolder) RunMigrations() {
 func (d *DBHolder) Reset() {
 	db := d.db
 
-	err := db.Exec(fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE;", d.schemaName)).Error
+	err := db.Exec(fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE;", d.config.SchemaName)).Error
 	if err != nil {
 		panic(err)
 	}
 
 	d.createSchema()
 	d.setSearchPath()
-	d.RunMigrations()
+
+	if d.config.RunMigrationsOnReset {
+		d.RunMigrations()
+	}
 }
 
 func (d *DBHolder) GetDBInstance() *gorm.DB {
@@ -131,14 +147,14 @@ func (d *DBHolder) GetDBInstance() *gorm.DB {
 }
 
 func (d *DBHolder) createSchema() {
-	err := d.db.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", d.schemaName)).Error
+	err := d.db.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", d.config.SchemaName)).Error
 	if err != nil {
 		panic(err)
 	}
 }
 
 func (d *DBHolder) setSearchPath() {
-	d.db = d.db.Exec(fmt.Sprintf("SET search_path TO %s;", d.schemaName))
+	d.db = d.db.Exec(fmt.Sprintf("SET search_path TO %s;", d.config.SchemaName))
 	if d.db.Error != nil {
 		panic(d.db.Error)
 	}
