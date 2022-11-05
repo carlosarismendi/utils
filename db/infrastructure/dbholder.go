@@ -1,4 +1,4 @@
-package dbholder
+package infrastructure
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 type DBHolder struct {
@@ -16,9 +17,30 @@ type DBHolder struct {
 	db         *gorm.DB
 }
 
+func NewDBHolderFromInstance(db *gorm.DB) *DBHolder {	
+	rows, err := db.Debug().Raw("SHOW search_path").Rows()
+	if err != nil {
+		panic(err)
+	}
+
+	var currentSchema string
+	rows.Next() 
+	err = rows.Scan(&currentSchema)
+	if err != nil {
+		panic(err)
+	}
+
+	return &DBHolder{
+		schemaName: currentSchema,
+		db: db,
+	}
+}
+
 func NewDBHolder(schemaName string) *DBHolder {
 	conn := fmt.Sprintf("host=localhost user=postgres password=postgres dbname=postgres search_path=%s port=5432 sslmode=disable TimeZone=UTC", schemaName)
-	db, err := gorm.Open(postgres.Open(conn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(conn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
 	if err != nil {
 		panic(err)
 	}

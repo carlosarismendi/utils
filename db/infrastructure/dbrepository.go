@@ -1,10 +1,9 @@
-package dbrepository
+package infrastructure
 
 import (
 	"context"
 	"ddd-hexa/shared/domain"
-	"ddd-hexa/shared/infrastructure/dbholder"
-	"errors"	
+	"errors"
 
 	"gorm.io/gorm"
 )
@@ -17,7 +16,7 @@ type DBrepository struct {
 	db *gorm.DB
 }
 
-func NewDBRepository(dbHolder *dbholder.DBHolder) *DBrepository {
+func NewDBRepository(dbHolder *DBHolder) *DBrepository {
 	return &DBrepository{
 		db: dbHolder.GetDBInstance(),
 	}
@@ -30,7 +29,7 @@ func (r *DBrepository) BeginTx(ctx context.Context) (context.Context, error) {
 	}
 
 	tx := r.db.Begin()
-	
+
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
