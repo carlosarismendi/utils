@@ -12,9 +12,9 @@ type NATSEventBus struct {
 	conn *nats.Conn
 }
 
-func NewNATSEventBus(host, port, user, password string) *NATSEventBus {
+func NewNATSEventBus(host, port string) *NATSEventBus {
 	url := fmt.Sprintf("nats://%s:%s", host, port)
-	nc, err := nats.Connect(url, nats.UserInfo(user, password))
+	nc, err := nats.Connect(url)
 	if err != nil {
 		panic(err)
 	}
@@ -23,7 +23,7 @@ func NewNATSEventBus(host, port, user, password string) *NATSEventBus {
 	}
 }
 
-func (eb *NATSEventBus) Publish(events ...domain.DomainEvent) error {
+func (eb *NATSEventBus) Publish(events ...domain.IDomainEvent) error {
 	for i := range events {
 		event := events[i]
 		data, err := json.Marshal(event)
@@ -31,11 +31,13 @@ func (eb *NATSEventBus) Publish(events ...domain.DomainEvent) error {
 			return err
 		}
 
-		err = eb.conn.Publish(event.GetEventTopic(), data)
+		err = eb.conn.Publish(event.GetTopic(), data)
 		if err != nil {
 			return err
 		}
-	}	
+	}
+
+	return nil
 }
 
 func (eb *NATSEventBus) RegisterAsyncSubscriber(topic string, subscriber domain.Subscriber) error {
@@ -49,5 +51,5 @@ func (eb *NATSEventBus) RegisterAsyncSubscriber(topic string, subscriber domain.
 }
 
 func (eb *NATSEventBus) Close() {
-	_ = eb.conn.Drain()	
+	_ = eb.conn.Drain()
 }
