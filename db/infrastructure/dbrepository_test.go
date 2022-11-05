@@ -9,7 +9,7 @@ import (
 )
 
 func TestSave(t *testing.T) {
-	dbHolder := NewDBHolder("db_repository")
+	dbHolder := NewDBHolder(&DBConfig{SchemaName: "db_repository_test"})
 	r := NewDBRepository(dbHolder)
 
 	t.Run("SavingValidResource", func(t *testing.T) {

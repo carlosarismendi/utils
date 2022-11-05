@@ -12,33 +12,64 @@ import (
 	"gorm.io/gorm/logger"
 )
 
+type DBConfig struct {
+	Host         string
+	Port         string
+	User         string
+	Password     string
+	DatabaseName string
+	SchemaName   string
+}
+
+func (c *DBConfig) checkValuesProvidedAndSetDefaults() {
+	if c.Host == "" {
+		c.Host = "localhost"
+	}
+
+	if c.Port == "" {
+		c.Port = "5432"
+	}
+
+	if c.User == "" {
+		c.User = "postgres"
+	}
+
+	if c.Password == "" {
+		c.Password = "postgres"
+	}
+
+	if c.DatabaseName == "" {
+		c.DatabaseName = "postgres"
+	}
+
+	if c.SchemaName == "" {
+		c.SchemaName = "public"
+	}
+}
+
+func (c *DBConfig) getConnectionString() string {
+	host := fmt.Sprintf("host=%s", c.Host)
+	port := fmt.Sprintf("port=%s", c.Port)
+	user := fmt.Sprintf("user=%s", c.User)
+	pass := fmt.Sprintf("password=%s", c.Password)
+	dbname := fmt.Sprintf("dbname=%s", c.DatabaseName)
+	search_path := fmt.Sprintf("search_path=%s", c.SchemaName)
+
+	conn := fmt.Sprintf("%s %s %s %s %s %s sslmode=disable TimeZone=UTC", host, port, user, pass, dbname, search_path)
+	return conn
+}
+
 type DBHolder struct {
 	schemaName string
 	db         *gorm.DB
 }
 
-func NewDBHolderFromInstance(db *gorm.DB) *DBHolder {	
-	rows, err := db.Debug().Raw("SHOW search_path").Rows()
-	if err != nil {
-		panic(err)
-	}
+func NewDBHolder(config *DBConfig) *DBHolder {
+	config.checkValuesProvidedAndSetDefaults()
 
-	var currentSchema string
-	rows.Next() 
-	err = rows.Scan(&currentSchema)
-	if err != nil {
-		panic(err)
-	}
-
-	return &DBHolder{
-		schemaName: currentSchema,
-		db: db,
-	}
-}
-
-func NewDBHolder(schemaName string) *DBHolder {
-	conn := fmt.Sprintf("host=localhost user=postgres password=postgres dbname=postgres search_path=%s port=5432 sslmode=disable TimeZone=UTC", schemaName)
-	db, err := gorm.Open(postgres.Open(conn), &gorm.Config{
+	conn := config.getConnectionString()
+	pg := postgres.Open(conn)
+	db, err := gorm.Open(pg, &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	if err != nil {
@@ -46,7 +77,7 @@ func NewDBHolder(schemaName string) *DBHolder {
 	}
 
 	dbHolder := &DBHolder{
-		schemaName: schemaName,
+		schemaName: config.SchemaName,
 		db:         db,
 	}
 
@@ -54,34 +85,7 @@ func NewDBHolder(schemaName string) *DBHolder {
 	return dbHolder
 }
 
-func (d *DBHolder) Reset() {
-	db := d.db
-
-	err := db.Exec(fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE;", d.schemaName)).Error
-	if err != nil {
-		panic(err)
-	}
-
-	d.createSchema()
-	d.setSearchPath()
-	d.runMigrations()
-}
-
-func (d *DBHolder) createSchema() {
-	err := d.db.Exec(fmt.Sprintf("CREATE SCHEMA %s;", d.schemaName)).Error
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (d *DBHolder) setSearchPath() {
-	d.db = d.db.Exec(fmt.Sprintf("SET search_path TO %s;", d.schemaName))
-	if d.db.Error != nil {
-		panic(d.db.Error)
-	}
-
-}
-func (d *DBHolder) runMigrations() {
+func (d *DBHolder) InitDatabase() {
 	db, err := d.db.DB()
 	if err != nil {
 		panic(err)
@@ -107,6 +111,33 @@ func (d *DBHolder) runMigrations() {
 	}
 }
 
+func (d *DBHolder) Reset() {
+	db := d.db
+
+	err := db.Exec(fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE;", d.schemaName)).Error
+	if err != nil {
+		panic(err)
+	}
+
+	d.createSchema()
+	d.setSearchPath()
+	d.InitDatabase()
+}
+
 func (d *DBHolder) GetDBInstance() *gorm.DB {
 	return d.db
+}
+
+func (d *DBHolder) createSchema() {
+	err := d.db.Exec(fmt.Sprintf("CREATE SCHEMA %s;", d.schemaName)).Error
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (d *DBHolder) setSearchPath() {
+	d.db = d.db.Exec(fmt.Sprintf("SET search_path TO %s;", d.schemaName))
+	if d.db.Error != nil {
+		panic(d.db.Error)
+	}
 }
