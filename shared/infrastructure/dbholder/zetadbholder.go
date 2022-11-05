@@ -28,10 +28,7 @@ func NewDBHolder(schemaName string) *DBHolder {
 		db:         db,
 	}
 
-	dbHolder.createSchema()
-	dbHolder.setSearchPath()
-	// dbHolder.runMigrations()
-
+	dbHolder.Reset()
 	return dbHolder
 }
 
@@ -43,16 +40,8 @@ func (d *DBHolder) Reset() {
 		panic(err)
 	}
 
-	err = db.Exec(fmt.Sprintf("CREATE SCHEMA %s;", d.schemaName)).Error
-	if err != nil {
-		panic(err)
-	}
-
-	err = db.Exec(fmt.Sprintf("SET search_path TO %s;", d.schemaName)).Error
-	if err != nil {
-		panic(err)
-	}
-
+	d.createSchema()
+	d.setSearchPath()
 	d.runMigrations()
 }
 
