@@ -81,11 +81,13 @@ func NewDBHolder(config *DBConfig) *DBHolder {
 		db:         db,
 	}
 
-	dbHolder.Reset()
+	dbHolder.createSchema()
+	dbHolder.setSearchPath()
+
 	return dbHolder
 }
 
-func (d *DBHolder) InitDatabase() {
+func (d *DBHolder) RunMigrations() {
 	db, err := d.db.DB()
 	if err != nil {
 		panic(err)
@@ -121,7 +123,7 @@ func (d *DBHolder) Reset() {
 
 	d.createSchema()
 	d.setSearchPath()
-	d.InitDatabase()
+	d.RunMigrations()
 }
 
 func (d *DBHolder) GetDBInstance() *gorm.DB {
@@ -129,7 +131,7 @@ func (d *DBHolder) GetDBInstance() *gorm.DB {
 }
 
 func (d *DBHolder) createSchema() {
-	err := d.db.Exec(fmt.Sprintf("CREATE SCHEMA %s;", d.schemaName)).Error
+	err := d.db.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", d.schemaName)).Error
 	if err != nil {
 		panic(err)
 	}
