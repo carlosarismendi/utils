@@ -9,7 +9,7 @@ type CreatedAt struct {
 }
 
 type UpdatedAt struct {
-	UpdateAt time.Time `json:"updatedAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 type DeletedAt struct {
