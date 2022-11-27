@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/caarlos0/env/v6"
+	"github.com/carlosarismendi/dddhelper/shared/infrastructure/dotenv"
 	"github.com/golang-migrate/migrate/v4"
 	migratePostgres "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -25,6 +26,8 @@ type DBConfig struct {
 }
 
 func NewDBConfigFromEnv() *DBConfig {
+	dotenv.Load()
+	
 	cfg := DBConfig{}
 	if err := env.Parse(&cfg); err != nil {
 		panic(err)

@@ -7,6 +7,7 @@ require (
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/golang-migrate/migrate/v4 v4.15.2
 	github.com/google/uuid v1.3.0
+	github.com/joho/godotenv v1.4.0
 	github.com/nats-io/nats.go v1.19.1
 	github.com/stretchr/testify v1.7.2
 	gorm.io/driver/postgres v1.3.7
