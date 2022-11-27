@@ -1,20 +1,31 @@
 package dotenv
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/joho/godotenv"
 )
 
-func Load() {
+var defaultFilenames []string = []string{".env", ".env.local"}
+
+func Load(filenames ...string) {
 	dir, err := os.Getwd()
 	if err != nil {
 		panic(err)
 	}
 
+	if len(filenames) == 0 {
+		filenames = defaultFilenames
+	}
+
 	for {
-		_ = godotenv.Load()
+		for i := range filenames {
+			path := fmt.Sprintf("%s/%s", dir, filenames[i])
+			_ = godotenv.Load(path)
+		}
+
 		if isEmptyPath(dir) {
 			break
 		}
