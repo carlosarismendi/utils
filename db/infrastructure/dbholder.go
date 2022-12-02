@@ -27,7 +27,7 @@ type DBConfig struct {
 
 func NewDBConfigFromEnv() *DBConfig {
 	dotenv.Load()
-	
+
 	cfg := DBConfig{}
 	if err := env.Parse(&cfg); err != nil {
 		panic(err)
@@ -60,6 +60,10 @@ func (c *DBConfig) checkValuesProvidedAndSetDefaults() {
 
 	if c.SchemaName == "" {
 		c.SchemaName = def.SchemaName
+	}
+
+	if c.MigrationsDir == "" {
+		c.SchemaName = def.MigrationsDir
 	}
 }
 
