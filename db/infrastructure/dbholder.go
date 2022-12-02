@@ -63,7 +63,7 @@ func (c *DBConfig) checkValuesProvidedAndSetDefaults() {
 	}
 
 	if c.MigrationsDir == "" {
-		c.SchemaName = def.MigrationsDir
+		c.MigrationsDir = def.MigrationsDir
 	}
 }
 
