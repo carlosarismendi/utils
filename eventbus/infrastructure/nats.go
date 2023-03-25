@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/carlosarismendi/dddhelper/eventbus/domain"
+	"github.com/carlosarismendi/utils/eventbus/domain"
 	"github.com/nats-io/nats.go"
 )
 

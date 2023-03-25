@@ -16,7 +16,7 @@ type NumFieldFilter struct {
 func NumField(field string) *NumFieldFilter {
 	filtered := removeSpecialCharacters(field)
 	return &NumFieldFilter{
-		field: filtered + "=",
+		field: filtered + " = ?",
 	}
 }
 

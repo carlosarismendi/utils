@@ -1,6 +1,8 @@
 package infrastructure
 
 import (
+	"log"
+
 	"gorm.io/gorm"
 )
 
@@ -10,8 +12,9 @@ type TextFieldFilter struct {
 
 func TextField(field string) *TextFieldFilter {
 	filtered := removeSpecialCharacters(field)
+	log.Println("######### Filter: ", filtered)
 	return &TextFieldFilter{
-		field: filtered + "=",
+		field: filtered + " = ?",
 	}
 }
 

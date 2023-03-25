@@ -1,4 +1,4 @@
-module github.com/carlosarismendi/dddhelper
+module github.com/carlosarismendi/utils
 
 go 1.18
 

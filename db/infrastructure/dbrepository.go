@@ -8,7 +8,7 @@ import (
 	"net/url"
 
 	"github.com/ansel1/merry"
-	"github.com/carlosarismendi/dddhelper/db/domain"
+	"github.com/carlosarismendi/utils/db/domain"
 	"gorm.io/gorm"
 )
 
@@ -23,9 +23,10 @@ type DBrepository struct {
 	filters map[string]Filter
 }
 
-func NewDBRepository(dbHolder *DBHolder) *DBrepository {
+func NewDBRepository(dbHolder *DBHolder, filters map[string]Filter) *DBrepository {
 	return &DBrepository{
-		db: dbHolder.GetDBInstance(),
+		db:      dbHolder.GetDBInstance(),
+		filters: filters,
 	}
 }
 
@@ -81,7 +82,7 @@ func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	for key, values := range v {
 		if len(values) == 0 {
 			continue
@@ -107,7 +108,7 @@ func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) 
 	rp := &domain.ResourcePage{
 		Total:     result.RowsAffected,
 		Limit:     int64(limit),
-		Resources: r,
+		Resources: dst,
 	}
 
 	return rp, nil

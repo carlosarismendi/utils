@@ -6,7 +6,7 @@ import (
 	"regexp"
 
 	"github.com/ansel1/merry"
-	"github.com/carlosarismendi/dddhelper/db/domain"
+	"github.com/carlosarismendi/utils/db/domain"
 	"gorm.io/gorm"
 )
 
@@ -18,7 +18,7 @@ func removeSpecialCharacters(str string) string {
 	if str == "" {
 		panic("Invalid value for field filter parameter. It can not be empty.")
 	}
-	return regexp.MustCompile(domain.AlphaNumericRegex).ReplaceAllString(str, "")
+	return regexp.MustCompile(domain.NotAlphaNumericRegex).ReplaceAllString(str, "")
 }
 
 func checkEmptyValue(field, value string) error {

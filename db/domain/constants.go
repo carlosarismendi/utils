@@ -1,3 +1,3 @@
 package domain
 
-const AlphaNumericRegex = `[^a-zA-Z0-9 ]+`
+const NotAlphaNumericRegex = `[^a-zA-Z\+\-\_]+`

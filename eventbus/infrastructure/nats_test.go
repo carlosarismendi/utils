@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/carlosarismendi/dddhelper/eventbus/domain"
+	"github.com/carlosarismendi/utils/eventbus/domain"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
