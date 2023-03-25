@@ -77,14 +77,14 @@ func TestFind(t *testing.T) {
 	dbHolder := NewTestDBHolder("db_repository_test_find")
 	dbHolder.Reset()
 
-	filters := map[string]filters.Filter{
+	filtersMap := map[string]filters.Filter{
 		"id":            filters.TextField("id"),
 		"name":          filters.TextField("name"),
 		"random_number": filters.NumField("random_number"),
 		"sort":          filters.Sorter(),
 	}
 
-	r := NewDBRepository(dbHolder.DBHolder, filters)
+	r := NewDBRepository(dbHolder.DBHolder, filtersMap)
 
 	createResourceTable(t, r)
 

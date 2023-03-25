@@ -22,7 +22,8 @@ func applyLimit(db *gorm.DB, value string) (*gorm.DB, int64, error) {
 	}
 
 	if num < 1 {
-		rErr := utilerror.NewError(utilerror.WrongInputParameterError, `Invalid value for "limit". It must be greater than 0.`)
+		rErr := utilerror.NewError(utilerror.WrongInputParameterError,
+			`Invalid value for "limit". It must be greater than 0.`)
 		return nil, 0, rErr
 	}
 

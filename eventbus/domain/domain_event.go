@@ -7,6 +7,7 @@ type IDomainEvent interface {
 	GetAccount() string
 }
 
+// nolint:revive // I want this to be called DomainEvent because it's a Domain Driven Design concept.
 type DomainEvent struct {
 	Topic     string `json:"topic"`
 	ProcessID string `json:"processID"`

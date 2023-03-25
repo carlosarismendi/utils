@@ -29,10 +29,10 @@ type DBrepository struct {
 // requires a that map will be used in the method Find(context.Context, url.values) to use the filters
 // and sorters provided in the url.values{} parameter. In case the url.values contains a filter
 // that it is not in the filters map, it will return an error.
-func NewDBRepository(dbHolder *DBHolder, filters map[string]filters.Filter) *DBrepository {
+func NewDBRepository(dbHolder *DBHolder, filtersMap map[string]filters.Filter) *DBrepository {
 	return &DBrepository{
 		db:      dbHolder.GetDBInstance(),
-		filters: filters,
+		filters: filtersMap,
 	}
 }
 
@@ -46,7 +46,7 @@ func (r *DBrepository) Begin(ctx context.Context) (context.Context, error) {
 	tx := r.db.Begin()
 
 	if tx.Error != nil {
-		tErr := utilerror.NewError(utilerror.GenericError, "Error begining transaction.").WithCause(tx.Error)
+		tErr := utilerror.NewError(utilerror.GenericError, "Error beginning transaction.").WithCause(tx.Error)
 		return nil, tErr
 	}
 
@@ -92,9 +92,10 @@ func (r *DBrepository) Save(ctx context.Context, value interface{}) error {
 
 // FindByID returns the resource found in the variable dst.
 // Usage:
-//     type Resource struct {...}
-//     var obj Resource
-//     repository.FindByID(ctx, "an_ID", &obj)
+//
+//	type Resource struct {...}
+//	var obj Resource
+//	repository.FindByID(ctx, "an_ID", &obj)
 func (r *DBrepository) FindByID(ctx context.Context, id string, dest interface{}) error {
 	err := r.db.Where("id = ?", id).First(dest).Error
 
@@ -112,29 +113,33 @@ func (r *DBrepository) FindByID(ctx context.Context, id string, dest interface{}
 
 // Find returns a list of elements matching the provided filters.
 // Usage:
-//     type Resource struct {...}
-//     var list []*Resource
-//     repository.FindByID(ctx, url.values{}, list)
+//
+//	type Resource struct {...}
+//	var list []*Resource
+//	repository.FindByID(ctx, url.values{}, list)
+//
 // It is necessary to pass the list parameter so
 // internally can infer the type and table to use to
 // request the data.
 // resourcePage is of type:
-// type ResourcePage struct {
-// 	   Total  int64 `json:"total"`
-// 	   Limit  int64 `json:"limit"`
-// 	   Offset int64 `json:"offset"`
 //
-//     // Resource will be a pointer to the type pased as
-//     // dst parameter in Find method. In this example,
-//     // *[]*Resource.
-//     Resources interface{} `json:"resources"`
-// }
+//	type ResourcePage struct {
+//		   Total  int64 `json:"total"`
+//		   Limit  int64 `json:"limit"`
+//		   Offset int64 `json:"offset"`
+//
+//	    // Resource will be a pointer to the type passed as
+//	    // dst parameter in Find method. In this example,
+//	    // *[]*Resource.
+//	    Resources interface{} `json:"resources"`
+//	}
 //
 // Filter:
-//     v := url.values{}
-//     v.Add("field", "value to use to filter")
-//     v.Add("sort", "field")  // sort in ascending order
-//     v.Add("sort", "-field") // sort in descending order
+//
+//	v := url.values{}
+//	v.Add("field", "value to use to filter")
+//	v.Add("sort", "field")  // sort in ascending order
+//	v.Add("sort", "-field") // sort in descending order
 func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) (*domain.ResourcePage, error) {
 	db, limit, err := r.applyLimit(r.db, &v)
 	if err != nil {
@@ -167,7 +172,7 @@ func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) 
 
 	rp := &domain.ResourcePage{
 		Total:     result.RowsAffected,
-		Limit:     int64(limit),
+		Limit:     limit,
 		Resources: dst,
 	}
 
@@ -189,9 +194,9 @@ func (r *DBrepository) HandleSaveOrUpdateError(err error) error {
 
 	if errors.Is(err, gorm.ErrDuplicatedKey) {
 		return utilerror.NewError(utilerror.ResourceAlreadyExistsError, "Resource already exists.").WithCause(err)
-	} else {
-		return utilerror.NewError(utilerror.GenericError, "Error saving or updating resource.").WithCause(err)
 	}
+
+	return utilerror.NewError(utilerror.GenericError, "Error saving or updating resource.").WithCause(err)
 }
 
 func (r *DBrepository) applyLimit(db *gorm.DB, v *url.Values) (*gorm.DB, int64, error) {

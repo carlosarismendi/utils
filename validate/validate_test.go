@@ -56,7 +56,8 @@ func TestValidate(t *testing.T) {
 
 		// ASSERT
 		require.Error(t, err)
-		require.Equal(t, "Invalid field ID: the value must be 'uuid'. The value received is 'INVALID_ID': \nInvalid field Age: the value must be 'min=0'. The value received is '-1'", err.Error())
+		require.Equal(t, "Invalid field ID: the value must be 'uuid'. The value received is 'INVALID_ID': "+
+			"\nInvalid field Age: the value must be 'min=0'. The value received is '-1'", err.Error())
 		require.Equal(t, http.StatusUnprocessableEntity, merry.HTTPCode(err))
 	})
 }

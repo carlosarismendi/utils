@@ -25,14 +25,14 @@ func newSubscriber(ch chan string) *subscriber {
 	}
 }
 
-func (s *subscriber) Consume(e []byte) {
-	var event event
-	err := json.Unmarshal(e, &event)
+func (s *subscriber) Consume(msg []byte) {
+	var e event
+	err := json.Unmarshal(msg, &e)
 	if err != nil {
 		panic(err)
 	}
 
-	s.msgs <- event.Msg
+	s.msgs <- e.Msg
 }
 
 func TestNatsEventBus(t *testing.T) {
@@ -62,7 +62,7 @@ func TestNatsEventBus(t *testing.T) {
 		case msg := <-ch:
 			t.Error("Unexpected message: ", msg)
 		case <-time.After(200 * time.Millisecond):
-			// Expected behaviour, since there are no messages published nor received by any subscriber
+			// Expected behavior, since there are no messages published nor received by any subscriber
 			break
 		}
 

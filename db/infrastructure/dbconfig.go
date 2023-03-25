@@ -65,8 +65,8 @@ func (c *DBConfig) getConnectionString() string {
 	user := fmt.Sprintf("user=%s", c.User)
 	pass := fmt.Sprintf("password=%s", c.Password)
 	dbname := fmt.Sprintf("dbname=%s", c.DatabaseName)
-	search_path := fmt.Sprintf("search_path=%s", c.SchemaName)
+	searchPath := fmt.Sprintf("search_path=%s", c.SchemaName)
 
-	conn := fmt.Sprintf("%s %s %s %s %s %s sslmode=disable TimeZone=UTC", host, port, user, pass, dbname, search_path)
+	conn := fmt.Sprintf("%s %s %s %s %s %s sslmode=disable TimeZone=UTC", host, port, user, pass, dbname, searchPath)
 	return conn
 }

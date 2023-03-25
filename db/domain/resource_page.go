@@ -6,7 +6,7 @@ type ResourcePage struct {
 	// TODO: implement offset in DBRepositoryFind
 	Offset int64 `json:"offset"`
 
-	// Resource will be a pointer to the type pased as
+	// Resource will be a pointer to the type passed as
 	// dst parameter in Find method. In this example,
 	// *[]*Resource.
 	Resources interface{} `json:"resources"`

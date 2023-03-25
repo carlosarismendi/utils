@@ -1,7 +1,6 @@
 package dotenv
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -14,11 +13,11 @@ func TestAlgo_shit(t *testing.T) {
 	require.NoError(t, err)
 
 	envFileName := ".env.test"
-	file, err := ioutil.TempFile(currentDir, envFileName)
+	file, err := os.CreateTemp(currentDir, envFileName)
 	require.NoError(t, err)
 	defer os.Remove(file.Name())
 
-	_, err = file.Write([]byte("TESTING_ENV_LOAD=ok"))
+	_, err = file.WriteString("TESTING_ENV_LOAD=ok")
 	require.NoError(t, err)
 
 	Load(file.Name())

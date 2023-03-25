@@ -21,7 +21,8 @@ func Validate(v interface{}) error {
 				tag = fmt.Sprintf("%s=%s", tag, err.Param())
 			}
 
-			errMsg := fmt.Sprintf("Invalid field %s: the value must be '%s'. The value received is '%v'", err.Field(), tag, err.Value())
+			errMsg := fmt.Sprintf("Invalid field %s: the value must be '%s'. The value received is '%v'",
+				err.Field(), tag, err.Value())
 			if mErr == nil {
 				mErr = merry.New(errMsg)
 			} else {

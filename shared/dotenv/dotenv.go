@@ -8,7 +8,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var defaultFilenames []string = []string{".env", ".env.local"}
+var defaultFilenames = []string{".env", ".env.local"}
 
 func Load(filenames ...string) {
 	dir, err := os.Getwd()
