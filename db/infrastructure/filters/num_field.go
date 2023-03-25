@@ -2,11 +2,10 @@ package filters
 
 import (
 	"fmt"
-	"net/http"
 	"strconv"
 
-	"github.com/ansel1/merry"
 	"github.com/carlosarismendi/utils/db/domain"
+	"github.com/carlosarismendi/utils/shared/utilerror"
 	"gorm.io/gorm"
 )
 
@@ -30,7 +29,7 @@ func (f *NumFieldFilter) Apply(db *gorm.DB, value string) (*gorm.DB, error) {
 	num, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
 		errMsg := fmt.Sprintf("Invalid value for filter %q. It must be a number.", f.field)
-		return nil, merry.New(errMsg).WithHTTPCode(http.StatusUnprocessableEntity)
+		return nil, utilerror.NewError(utilerror.WrongInputParameterError, errMsg).WithCause(err)
 	}
 	return db.Where(f.field, num), nil
 }

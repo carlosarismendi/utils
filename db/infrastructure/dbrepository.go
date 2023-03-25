@@ -4,12 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 
-	"github.com/ansel1/merry"
 	"github.com/carlosarismendi/utils/db/domain"
 	"github.com/carlosarismendi/utils/db/infrastructure/filters"
+	"github.com/carlosarismendi/utils/shared/utilerror"
 	"gorm.io/gorm"
 )
 
@@ -40,7 +39,8 @@ func (r *DBrepository) Begin(ctx context.Context) (context.Context, error) {
 	tx := r.db.Begin()
 
 	if tx.Error != nil {
-		return nil, tx.Error
+		tErr := utilerror.NewError(utilerror.GenericError, "Error begining transaction.").WithCause(tx.Error)
+		return nil, tErr
 	}
 
 	ctx = context.WithValue(ctx, ctxk(transactionName), tx)
@@ -50,7 +50,8 @@ func (r *DBrepository) Begin(ctx context.Context) (context.Context, error) {
 func (r *DBrepository) Commit(ctx context.Context) error {
 	txFromCtx := ctx.Value(ctxk(transactionName))
 	if txFromCtx == nil {
-		return errors.New("NIL TX in Commit")
+		tErr := utilerror.NewError(utilerror.GenericError, "Missing transaction when doing Commit.")
+		return tErr
 	}
 	tx := txFromCtx.(*gorm.DB)
 	return tx.Commit().Error
@@ -59,7 +60,8 @@ func (r *DBrepository) Commit(ctx context.Context) error {
 func (r *DBrepository) Rollback(ctx context.Context) error {
 	txFromCtx := ctx.Value(ctxk(transactionName))
 	if txFromCtx == nil {
-		return errors.New("NIL TX in Rollback")
+		tErr := utilerror.NewError(utilerror.GenericError, "Missing transaction when doing Rollback.")
+		return tErr
 	}
 	tx := txFromCtx.(*gorm.DB)
 	return tx.Rollback().Error
@@ -68,14 +70,28 @@ func (r *DBrepository) Rollback(ctx context.Context) error {
 func (r *DBrepository) Save(ctx context.Context, value interface{}) error {
 	txFromCtx := ctx.Value(ctxk(transactionName))
 	if txFromCtx == nil {
-		return errors.New("NIL TX in Save")
+		tErr := utilerror.NewError(utilerror.GenericError, "Missing transaction when doing Save.")
+		return tErr
 	}
 	tx := txFromCtx.(*gorm.DB)
-	return tx.Create(value).Error
+	err := tx.Create(value).Error
+
+	return r.HandleSaveOrUpdateError(err)
 }
 
 func (r *DBrepository) FindByID(ctx context.Context, id string, dest interface{}) error {
-	return r.db.Where("id = ?", id).First(dest).Error
+	err := r.db.Where("id = ?", id).First(dest).Error
+
+	var tErr error
+	if err != nil {
+		if r.IsResourceNotFound(err) {
+			tErr = utilerror.NewError(utilerror.ResourceNotFoundError, "Resource not found.")
+		} else {
+			tErr = utilerror.NewError(utilerror.GenericError, "Error finding resource by id.").WithCause(err)
+		}
+	}
+
+	return tErr
 }
 
 func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) (*domain.ResourcePage, error) {
@@ -91,7 +107,8 @@ func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) 
 
 		filter, ok := r.filters[key]
 		if !ok {
-			return nil, merry.New(fmt.Sprintf("Invalid filter %q.", key)).WithHTTPCode(http.StatusUnprocessableEntity)
+			rErr := utilerror.NewError(utilerror.WrongInputParameterError, fmt.Sprintf("Invalid filter %q.", key))
+			return nil, rErr
 		}
 
 		var err error
@@ -103,7 +120,8 @@ func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) 
 
 	result := db.Find(dst)
 	if result.Error != nil {
-		return nil, result.Error
+		rErr := utilerror.NewError(utilerror.GenericError, "Error finding resources.").WithCause(result.Error)
+		return nil, rErr
 	}
 
 	rp := &domain.ResourcePage{
@@ -113,6 +131,22 @@ func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) 
 	}
 
 	return rp, nil
+}
+
+func (r *DBrepository) IsResourceNotFound(err error) bool {
+	return err != nil && errors.Is(err, gorm.ErrRecordNotFound)
+}
+
+func (r *DBrepository) HandleSaveOrUpdateError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return utilerror.NewError(utilerror.ResourceAlreadyExistsError, "Resource already exists.").WithCause(err)
+	} else {
+		return utilerror.NewError(utilerror.GenericError, "Error saving or updating resource.").WithCause(err)
+	}
 }
 
 func (r *DBrepository) applyLimit(db *gorm.DB, v *url.Values) (*gorm.DB, int64, error) {

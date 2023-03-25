@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/caarlos0/env"
-	"github.com/carlosarismendi/utils/shared/infrastructure/dotenv"
+	"github.com/carlosarismendi/utils/shared/dotenv"
 )
 
 type DBConfig struct {

@@ -2,10 +2,9 @@ package domain
 
 import (
 	"fmt"
-	"net/http"
 	"regexp"
 
-	"github.com/ansel1/merry"
+	"github.com/carlosarismendi/utils/shared/utilerror"
 )
 
 func RemoveSpecialCharacters(str string) string {
@@ -17,8 +16,8 @@ func RemoveSpecialCharacters(str string) string {
 
 func CheckEmptyValue(field, value string) error {
 	if value == "" {
-		errMsg := fmt.Sprintf("Invalid value for filter %q. It can not be empty.", field)
-		return merry.New(errMsg).WithHTTPCode(http.StatusUnprocessableEntity)
+		return utilerror.NewError(utilerror.WrongInputParameterError,
+			fmt.Sprintf("Invalid value for filter %q. It can not be empty.", field))
 	}
 	return nil
 }
