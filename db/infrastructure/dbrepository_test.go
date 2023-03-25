@@ -25,8 +25,8 @@ func createResourceTable(t testing.TB, r *DBrepository) {
 }
 
 func TestSave(t *testing.T) {
-	dbHolder := NewDBHolder(&DBConfig{SchemaName: "db_repository_test_save"})
-	r := NewDBRepository(dbHolder, nil)
+	dbHolder := NewTestDBHolder("db_repository_test_save")
+	r := NewDBRepository(dbHolder.DBHolder, nil)
 
 	t.Run("SavingValidResource", func(t *testing.T) {
 		dbHolder.Reset()
@@ -74,7 +74,7 @@ func TestSave(t *testing.T) {
 }
 
 func TestFind(t *testing.T) {
-	dbHolder := NewDBHolder(&DBConfig{SchemaName: "db_repository_test_find"})
+	dbHolder := NewTestDBHolder("db_repository_test_find")
 	dbHolder.Reset()
 
 	filters := map[string]filters.Filter{
@@ -84,7 +84,7 @@ func TestFind(t *testing.T) {
 		"sort":          filters.Sorter(),
 	}
 
-	r := NewDBRepository(dbHolder, filters)
+	r := NewDBRepository(dbHolder.DBHolder, filters)
 
 	createResourceTable(t, r)
 

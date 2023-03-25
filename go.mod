@@ -21,6 +21,7 @@ require (
 
 require (
 	github.com/ansel1/merry v1.7.0
+	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
