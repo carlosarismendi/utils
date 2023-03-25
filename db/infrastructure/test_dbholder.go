@@ -1,14 +1,18 @@
 package infrastructure
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type TestDBHolder struct {
 	*DBHolder
 }
 
 func NewTestDBHolder(schemaName string) *TestDBHolder {
+	cfg := NewDBConfigFromEnv()
+	cfg.SchemaName = schemaName
 	return &TestDBHolder{
-		DBHolder: NewDBHolder(&DBConfig{SchemaName: schemaName}),
+		DBHolder: NewDBHolder(cfg),
 	}
 }
 

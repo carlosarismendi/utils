@@ -29,34 +29,32 @@ func NewDBConfigFromEnv() *DBConfig {
 }
 
 func (c *DBConfig) checkValuesProvidedAndSetDefaults() {
-	def := NewDBConfigFromEnv()
-
 	if c.Host == "" {
-		c.Host = def.Host
+		c.Host = "localhost"
 	}
 
 	if c.Port == "" {
-		c.Port = def.Port
+		c.Port = "5432"
 	}
 
 	if c.User == "" {
-		c.User = def.User
+		c.User = "postgres"
 	}
 
 	if c.Password == "" {
-		c.Password = def.Password
+		c.Password = "postgres"
 	}
 
 	if c.DatabaseName == "" {
-		c.DatabaseName = def.DatabaseName
+		c.DatabaseName = "postgres"
 	}
 
 	if c.SchemaName == "" {
-		c.SchemaName = def.SchemaName
+		c.SchemaName = "public"
 	}
 
 	if c.MigrationsDir == "" {
-		c.MigrationsDir = def.MigrationsDir
+		c.MigrationsDir = "./migrations"
 	}
 }
 
