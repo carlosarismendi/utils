@@ -181,4 +181,72 @@ func TestFind(t *testing.T) {
 		require.Contains(t, resources, r2)
 		require.Contains(t, resources, r3)
 	})
+
+	t.Run("FindingSortingByTextFieldNameAsc", func(t *testing.T) {
+		v := url.Values{}
+		v.Add("sort", "name")
+
+		var resources []*Resource
+		rp, err := r.Find(context.Background(), v, &resources)
+
+		require.NoError(t, err)
+		require.Equal(t, 3, len(resources))
+		require.Equal(t, int64(3), rp.Total)
+		require.Equal(t, 3, len(*rp.Resources.(*[]*Resource)))
+		require.Equal(t, int64(0), rp.Offset)
+		require.Equal(t, int64(10), rp.Limit)
+
+		require.Equal(t, []*Resource{r1, r2, r3}, resources)
+	})
+
+	t.Run("FindingSortingByTextFieldNameDesc", func(t *testing.T) {
+		v := url.Values{}
+		v.Add("sort", "-name")
+
+		var resources []*Resource
+		rp, err := r.Find(context.Background(), v, &resources)
+
+		require.NoError(t, err)
+		require.Equal(t, 3, len(resources))
+		require.Equal(t, int64(3), rp.Total)
+		require.Equal(t, 3, len(*rp.Resources.(*[]*Resource)))
+		require.Equal(t, int64(0), rp.Offset)
+		require.Equal(t, int64(10), rp.Limit)
+
+		require.Equal(t, []*Resource{r3, r2, r1}, resources)
+	})
+
+	t.Run("FindingSortingByFieldRandomNumberAsc", func(t *testing.T) {
+		v := url.Values{}
+		v.Add("sort", "random_number")
+
+		var resources []*Resource
+		rp, err := r.Find(context.Background(), v, &resources)
+
+		require.NoError(t, err)
+		require.Equal(t, 3, len(resources))
+		require.Equal(t, int64(3), rp.Total)
+		require.Equal(t, 3, len(*rp.Resources.(*[]*Resource)))
+		require.Equal(t, int64(0), rp.Offset)
+		require.Equal(t, int64(10), rp.Limit)
+
+		require.Equal(t, []*Resource{r1, r2, r3}, resources)
+	})
+
+	t.Run("FindingSortingByNumFieldRandomNumberDesc", func(t *testing.T) {
+		v := url.Values{}
+		v.Add("sort", "-random_number")
+
+		var resources []*Resource
+		rp, err := r.Find(context.Background(), v, &resources)
+
+		require.NoError(t, err)
+		require.Equal(t, 3, len(resources))
+		require.Equal(t, int64(3), rp.Total)
+		require.Equal(t, 3, len(*rp.Resources.(*[]*Resource)))
+		require.Equal(t, int64(0), rp.Offset)
+		require.Equal(t, int64(10), rp.Limit)
+
+		require.Equal(t, []*Resource{r2, r3, r1}, resources)
+	})
 }

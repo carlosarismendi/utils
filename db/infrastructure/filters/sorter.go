@@ -25,7 +25,7 @@ func (f *SortFilter) Apply(db *gorm.DB, value string) (*gorm.DB, error) {
 	var field string
 	var direction string
 	if filteredValue[0] == '-' {
-		field = filteredValue[1 : len(filteredValue)-1]
+		field = filteredValue[1:]
 		direction = "desc"
 	} else {
 		field = filteredValue
