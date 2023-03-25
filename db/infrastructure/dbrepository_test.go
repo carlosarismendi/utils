@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/carlosarismendi/utils/db/domain"
+	"github.com/carlosarismendi/utils/db/infrastructure/filters"
 	"github.com/stretchr/testify/require"
 )
 
@@ -73,15 +74,16 @@ func TestSave(t *testing.T) {
 }
 
 func TestFind(t *testing.T) {
-
 	dbHolder := NewDBHolder(&DBConfig{SchemaName: "db_repository_test_find"})
 	dbHolder.Reset()
 
-	filters := map[string]Filter{
-		"id":            TextField("id"),
-		"name":          TextField("name"),
-		"random_number": NumField("random_number"),
+	filters := map[string]filters.Filter{
+		"id":            filters.TextField("id"),
+		"name":          filters.TextField("name"),
+		"random_number": filters.NumField("random_number"),
+		"sort":          filters.Sorter(),
 	}
+
 	r := NewDBRepository(dbHolder, filters)
 
 	createResourceTable(t, r)

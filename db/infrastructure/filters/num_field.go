@@ -1,4 +1,4 @@
-package infrastructure
+package filters
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/ansel1/merry"
+	"github.com/carlosarismendi/utils/db/domain"
 	"gorm.io/gorm"
 )
 
@@ -14,14 +15,14 @@ type NumFieldFilter struct {
 }
 
 func NumField(field string) *NumFieldFilter {
-	filtered := removeSpecialCharacters(field)
+	filtered := domain.RemoveSpecialCharacters(field)
 	return &NumFieldFilter{
 		field: filtered + " = ?",
 	}
 }
 
 func (f *NumFieldFilter) Apply(db *gorm.DB, value string) (*gorm.DB, error) {
-	err := checkEmptyValue(f.field, value)
+	err := domain.CheckEmptyValue(f.field, value)
 	if err != nil {
 		return nil, err
 	}

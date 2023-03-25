@@ -9,6 +9,7 @@ import (
 
 	"github.com/ansel1/merry"
 	"github.com/carlosarismendi/utils/db/domain"
+	"github.com/carlosarismendi/utils/db/infrastructure/filters"
 	"gorm.io/gorm"
 )
 
@@ -20,10 +21,10 @@ const transactionName string = "dbtx"
 
 type DBrepository struct {
 	db      *gorm.DB
-	filters map[string]Filter
+	filters map[string]filters.Filter
 }
 
-func NewDBRepository(dbHolder *DBHolder, filters map[string]Filter) *DBrepository {
+func NewDBRepository(dbHolder *DBHolder, filters map[string]filters.Filter) *DBrepository {
 	return &DBrepository{
 		db:      dbHolder.GetDBInstance(),
 		filters: filters,

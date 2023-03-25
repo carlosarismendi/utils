@@ -5,11 +5,12 @@ import (
 	"strconv"
 
 	"github.com/ansel1/merry"
+	"github.com/carlosarismendi/utils/db/domain"
 	"gorm.io/gorm"
 )
 
 func applyLimit(db *gorm.DB, value string) (*gorm.DB, int64, error) {
-	err := checkEmptyValue("limit", value)
+	err := domain.CheckEmptyValue("limit", value)
 	if err != nil {
 		return nil, 0, err
 	}

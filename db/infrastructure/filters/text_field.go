@@ -1,8 +1,7 @@
-package infrastructure
+package filters
 
 import (
-	"log"
-
+	"github.com/carlosarismendi/utils/db/domain"
 	"gorm.io/gorm"
 )
 
@@ -11,15 +10,14 @@ type TextFieldFilter struct {
 }
 
 func TextField(field string) *TextFieldFilter {
-	filtered := removeSpecialCharacters(field)
-	log.Println("######### Filter: ", filtered)
+	filtered := domain.RemoveSpecialCharacters(field)
 	return &TextFieldFilter{
 		field: filtered + " = ?",
 	}
 }
 
 func (f *TextFieldFilter) Apply(db *gorm.DB, value string) (*gorm.DB, error) {
-	err := checkEmptyValue(f.field, value)
+	err := domain.CheckEmptyValue(f.field, value)
 	if err != nil {
 		return nil, err
 	}

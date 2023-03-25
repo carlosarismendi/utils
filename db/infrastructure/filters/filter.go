@@ -1,9 +1,9 @@
-package infrastructure
+package filters
 
 import (
 	"gorm.io/gorm"
 )
 
-type Sorter interface {
+type Filter interface {
 	Apply(db *gorm.DB, value string) (*gorm.DB, error)
 }
