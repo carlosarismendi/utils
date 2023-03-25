@@ -18,6 +18,7 @@ type DBConfig struct {
 	RunMigrationsOnReset bool   `env:"POSTGRES_RUN_MIGRATIONS" envDefault:"false"`
 }
 
+// NewDBConfigFromEnv returns a *DBConfig initialized by env variables
 func NewDBConfigFromEnv() *DBConfig {
 	dotenv.Load()
 

@@ -18,11 +18,17 @@ type ctxk string
 
 const transactionName string = "dbtx"
 
+// DBrepository is built on top of GORM to provide easier transaction management as
+// well as methods like Save or Find.
 type DBrepository struct {
 	db      *gorm.DB
 	filters map[string]filters.Filter
 }
 
+// NewDBRepository returns a DBrepository.
+// requires a that map will be used in the method Find(context.Context, url.values) to use the filters
+// and sorters provided in the url.values{} parameter. In case the url.values contains a filter
+// that it is not in the filters map, it will return an error.
 func NewDBRepository(dbHolder *DBHolder, filters map[string]filters.Filter) *DBrepository {
 	return &DBrepository{
 		db:      dbHolder.GetDBInstance(),
@@ -30,6 +36,7 @@ func NewDBRepository(dbHolder *DBHolder, filters map[string]filters.Filter) *DBr
 	}
 }
 
+// Begin opens a new transaction.
 func (r *DBrepository) Begin(ctx context.Context) (context.Context, error) {
 	txFromCtx := ctx.Value(transactionName)
 	if txFromCtx != nil {
@@ -47,6 +54,7 @@ func (r *DBrepository) Begin(ctx context.Context) (context.Context, error) {
 	return ctx, nil
 }
 
+// Commit closes and confirms the current transaction.
 func (r *DBrepository) Commit(ctx context.Context) error {
 	txFromCtx := ctx.Value(ctxk(transactionName))
 	if txFromCtx == nil {
@@ -57,6 +65,7 @@ func (r *DBrepository) Commit(ctx context.Context) error {
 	return tx.Commit().Error
 }
 
+// Rollback cancels the current transaction.
 func (r *DBrepository) Rollback(ctx context.Context) error {
 	txFromCtx := ctx.Value(ctxk(transactionName))
 	if txFromCtx == nil {
@@ -67,6 +76,8 @@ func (r *DBrepository) Rollback(ctx context.Context) error {
 	return tx.Rollback().Error
 }
 
+// Save is a combination function. If save value does not contain primary key,
+// it will execute Create, otherwise it will execute Update (with all fields).
 func (r *DBrepository) Save(ctx context.Context, value interface{}) error {
 	txFromCtx := ctx.Value(ctxk(transactionName))
 	if txFromCtx == nil {
@@ -74,11 +85,16 @@ func (r *DBrepository) Save(ctx context.Context, value interface{}) error {
 		return tErr
 	}
 	tx := txFromCtx.(*gorm.DB)
-	err := tx.Create(value).Error
+	err := tx.Save(value).Error
 
 	return r.HandleSaveOrUpdateError(err)
 }
 
+// FindByID returns the resource found in the variable dst.
+// Usage:
+//     type Resource struct {...}
+//     var obj Resource
+//     repository.FindByID(ctx, "an_ID", &obj)
 func (r *DBrepository) FindByID(ctx context.Context, id string, dest interface{}) error {
 	err := r.db.Where("id = ?", id).First(dest).Error
 
@@ -94,6 +110,31 @@ func (r *DBrepository) FindByID(ctx context.Context, id string, dest interface{}
 	return tErr
 }
 
+// Find returns a list of elements matching the provided filters.
+// Usage:
+//     type Resource struct {...}
+//     var list []*Resource
+//     repository.FindByID(ctx, url.values{}, list)
+// It is necessary to pass the list parameter so
+// internally can infer the type and table to use to
+// request the data.
+// resourcePage is of type:
+// type ResourcePage struct {
+// 	   Total  int64 `json:"total"`
+// 	   Limit  int64 `json:"limit"`
+// 	   Offset int64 `json:"offset"`
+//
+//     // Resource will be a pointer to the type pased as
+//     // dst parameter in Find method. In this example,
+//     // *[]*Resource.
+//     Resources interface{} `json:"resources"`
+// }
+//
+// Filter:
+//     v := url.values{}
+//     v.Add("field", "value to use to filter")
+//     v.Add("sort", "field")  // sort in ascending order
+//     v.Add("sort", "-field") // sort in descending order
 func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) (*domain.ResourcePage, error) {
 	db, limit, err := r.applyLimit(r.db, &v)
 	if err != nil {
@@ -133,10 +174,14 @@ func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) 
 	return rp, nil
 }
 
+// IsResourceNotFound in case of running custom SELECT queries using *gorm.DB, this method
+// provides an easy way of checking if the error returned is a NotFound or other type.
 func (r *DBrepository) IsResourceNotFound(err error) bool {
 	return err != nil && errors.Is(err, gorm.ErrRecordNotFound)
 }
 
+// HandleSaveOrUpdateError in case of running an INSERT/UPDATE query, this method provides
+// an easy way of checking if the returned error is nil or if it violates a PRIMARY KEY/UNIQUE constraint.
 func (r *DBrepository) HandleSaveOrUpdateError(err error) error {
 	if err == nil {
 		return nil

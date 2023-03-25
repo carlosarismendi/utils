@@ -38,7 +38,9 @@ dbHolder.RunMigrations()
 ### DBrepository
 
 ```Go
-// This map will be used in the method Find(context.Context, url.values) to use the filters and sorters provided in the url.values parameter. In case the url.values contains a filter that it is not in the filters map, it will return an error.
+// This map will be used in the method Find(context.Context, url.values) to use the filters
+// and sorters provided in the url.values parameter. In case the url.values contains a filter
+// that it is not in the filters map, it will return an error.
 filters := map[string]filters.Filter{
     "id":            filters.TextField("id"),
     "name":          filters.TextField("name"),

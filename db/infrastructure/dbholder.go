@@ -17,6 +17,9 @@ type DBHolder struct {
 	db     *gorm.DB
 }
 
+// Returns a *DBHolder initialized with the provided config.
+// In case the *DBConfig object has zero values, those will
+// be filled with default values.
 func NewDBHolder(config *DBConfig) *DBHolder {
 	config.checkValuesProvidedAndSetDefaults()
 
@@ -40,6 +43,7 @@ func NewDBHolder(config *DBConfig) *DBHolder {
 	return dbHolder
 }
 
+// RunMigrations runs SQL migrations found in the folder specified by DBConfig.MigrationsDir
 func (d *DBHolder) RunMigrations() {
 	db, err := d.db.DB()
 	if err != nil {
@@ -66,6 +70,8 @@ func (d *DBHolder) RunMigrations() {
 	}
 }
 
+// GetDBInstance returns the inner database object *gorm.DB provided by GORM.
+// More on GORM here: https://gorm.io/
 func (d *DBHolder) GetDBInstance() *gorm.DB {
 	return d.db
 }
