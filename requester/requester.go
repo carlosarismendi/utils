@@ -45,7 +45,7 @@ func (r *HTTPRequester) Send(dst interface{}, options ...Option) (*http.Response
 		return nil, nil, err
 	}
 
-	response, err := requesterClone.sendRequest(request)
+	response, err := r.Doer.Do(request)
 	if err != nil {
 		return response, nil, err
 	}
@@ -65,10 +65,6 @@ func (r *HTTPRequester) prepareRequest() (*http.Request, error) {
 	}
 
 	return request, nil
-}
-
-func (r *HTTPRequester) sendRequest(request *http.Request) (*http.Response, error) {
-	return r.Doer.Do(request)
 }
 
 func (r *HTTPRequester) readBody(dst interface{}, response *http.Response) ([]byte, error) {

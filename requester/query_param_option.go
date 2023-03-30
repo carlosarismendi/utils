@@ -12,9 +12,9 @@ func QueryParam(name, value string) *QueryParamOption {
 
 func (o *QueryParamOption) Apply(req *HTTPRequester) {
 	if req.containsQueryParams {
-		req.url = req.url + "&" + o.param
+		req.path += ("&" + o.param)
 	} else {
 		req.containsQueryParams = true
-		req.url = req.url + "?" + o.param
+		req.path += ("?" + o.param)
 	}
 }

@@ -11,5 +11,5 @@ func AppendPath(path string) *AppendPathOption {
 }
 
 func (o *AppendPathOption) Apply(req *HTTPRequester) {
-	req.url += o.path
+	req.path += o.path
 }
