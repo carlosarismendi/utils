@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/carlosarismendi/utils/shared/utilerror"
+	"github.com/carlosarismendi/utils/utilerror"
 )
 
 func RemoveSpecialCharacters(str string) string {

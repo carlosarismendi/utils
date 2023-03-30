@@ -8,7 +8,7 @@ import (
 
 	"github.com/carlosarismendi/utils/db/domain"
 	"github.com/carlosarismendi/utils/db/infrastructure/filters"
-	"github.com/carlosarismendi/utils/shared/utilerror"
+	"github.com/carlosarismendi/utils/utilerror"
 	"gorm.io/gorm"
 )
 
