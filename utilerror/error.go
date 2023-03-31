@@ -2,7 +2,6 @@ package utilerror
 
 import (
 	"encoding/json"
-	"net/http"
 )
 
 type UtilError struct {
@@ -21,19 +20,17 @@ func NewError(key, message string) *UtilError {
 
 func (c *UtilError) MarshalJSON() ([]byte, error) {
 	type err struct {
-		HTTPCode int    `json:"httpCode"`
-		Key      string `json:"key"`
-		Message  string `json:"message"`
-		Cause    string `json:"cause,omitempty"`
+		Key     string `json:"key"`
+		Message string `json:"message"`
+		Cause   string `json:"cause,omitempty"`
 	}
 
 	m := make(map[string]interface{})
 
 	m["error"] = &err{
-		HTTPCode: c.getHTTPCode(c.key),
-		Key:      c.key,
-		Message:  c.message,
-		Cause:    c.cause,
+		Key:     c.key,
+		Message: c.message,
+		Cause:   c.cause,
 	}
 
 	return json.Marshal(m)
@@ -51,21 +48,6 @@ func (c *UtilError) Error() string {
 func (c *UtilError) WithCause(err error) *UtilError {
 	c.cause = err.Error()
 	return c
-}
-
-func (c *UtilError) getHTTPCode(key string) int {
-	switch key {
-	case ResourceAlreadyExistsError:
-		return http.StatusConflict
-	case ResourceNotFoundError:
-		return http.StatusNotFound
-	case WrongInputParameterError:
-		return http.StatusUnprocessableEntity
-	case GenericError:
-		return http.StatusTeapot
-	default:
-		return http.StatusInternalServerError
-	}
 }
 
 func GetKey(err error) string {
