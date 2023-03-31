@@ -2,11 +2,13 @@ package infrastructure
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"testing"
 
 	"github.com/carlosarismendi/utils/db/domain"
 	"github.com/carlosarismendi/utils/db/infrastructure/filters"
+	"github.com/carlosarismendi/utils/utilerror"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,11 +19,120 @@ type Resource struct {
 }
 
 func createResourceTable(t testing.TB, r *DBrepository) {
-	ctx, err := domain.BeginTx(context.Background(), r)
+	err := r.db.Exec("CREATE TABLE resources (id UUID, name TEXT, random_number INTEGER);").Error
 	require.NoError(t, err)
+}
 
-	err = r.db.Exec("CREATE TABLE resources (id UUID, name TEXT, random_number INTEGER);").Error
-	domain.EndTx(ctx, r, &err)
+func TestTransactions(t *testing.T) {
+	dbHolder := NewTestDBHolder("db_repository_test_transactions")
+	r := NewDBRepository(dbHolder.DBHolder, nil)
+
+	t.Run("savingResourceWithoutError_commitsTransaction", func(t *testing.T) {
+		// ARRANGE
+
+		dbHolder.Reset()
+		createResourceTable(t, r)
+
+		resource := Resource{
+			ID:           "0ea57dec-5e79-40dc-b971-a52561fcc2c7",
+			Name:         "Resource name",
+			RandomNumber: 4,
+		}
+
+		err := func() (rErr error) {
+			ctx, err := domain.BeginTx(context.Background(), r)
+			if err != nil {
+				return err
+			}
+			defer domain.EndTx(ctx, r, &rErr)
+
+			// ACT
+			return r.Save(ctx, &resource)
+		}()
+		require.NoError(t, err)
+
+		// ASSERT
+		var actual Resource
+		err = r.FindByID(context.Background(), resource.ID, &actual)
+		require.NoError(t, err)
+	})
+
+	t.Run("savingAResourceWithError_rollbacksTransaction", func(t *testing.T) {
+		// ARRANGE
+
+		dbHolder.Reset()
+		createResourceTable(t, r)
+
+		validResource := Resource{
+			ID:           "0ea57dec-5e79-40dc-b971-a52561fcc2c7",
+			Name:         "Resource name",
+			RandomNumber: 4,
+		}
+
+		err := func() (rErr error) {
+			ctx, err := domain.BeginTx(context.Background(), r)
+			if err != nil {
+				return err
+			}
+			defer domain.EndTx(ctx, r, &rErr)
+
+			// ACT
+			err = r.Save(ctx, &validResource)
+			if err != nil {
+				return err
+			}
+
+			return fmt.Errorf("err")
+		}()
+		require.Error(t, err)
+
+		// ASSERT
+		var actual Resource
+		err = r.FindByID(context.Background(), validResource.ID, &actual)
+		require.Error(t, err)
+		require.Equal(t, utilerror.ResourceNotFoundError, utilerror.GetKey(err), err)
+	})
+
+	t.Run("savingAResourceWithPanic_rollbacksTransactionAndReemitsPanic", func(t *testing.T) {
+		// ARRANGE
+		dbHolder.Reset()
+		createResourceTable(t, r)
+
+		resource := Resource{
+			ID:           "0ea57dec-5e79-40dc-b971-a52561fcc2c7",
+			Name:         "Resource name",
+			RandomNumber: 4,
+		}
+
+		defer func() {
+			pErr := recover()
+			require.NotNil(t, pErr, "Panic error expected not nil.")
+			require.Error(t, pErr.(error))
+
+			// ASSERT
+			var actual Resource
+			err := r.FindByID(context.Background(), resource.ID, &actual)
+			require.Error(t, err)
+			require.Equal(t, utilerror.ResourceNotFoundError, utilerror.GetKey(err), err)
+		}()
+
+		err := func() (rErr error) {
+			ctx, err := domain.BeginTx(context.Background(), r)
+			if err != nil {
+				return err
+			}
+			defer domain.EndTx(ctx, r, &rErr)
+
+			// ACT
+			err = r.Save(ctx, &resource)
+			if err != nil {
+				return err
+			}
+
+			panic(fmt.Errorf("Fake panic error"))
+		}()
+		require.Error(t, err)
+	})
 }
 
 func TestSave(t *testing.T) {
@@ -208,7 +319,7 @@ func TestFind(t *testing.T) {
 		t.Run(ft.name, func(t *testing.T) {
 			// ARRANGE
 			expectedResources := ft.expected.Resources.([]*Resource)
-			require.EqualValues(t, len(expectedResources), ft.expected.Total, "Expected Total and Resources are not properly set.")
+			require.EqualValues(t, len(expectedResources), ft.expected.Total, "Expected Total and Resources doesn't match.")
 
 			// ACT
 			var resources []*Resource
