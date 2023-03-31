@@ -37,13 +37,14 @@ func NewDBRepository(dbHolder *DBHolder, filtersMap map[string]filters.Filter) *
 }
 
 // Begin opens a new transaction.
+// NOTE: Nested transactions not supported.
 func (r *DBrepository) Begin(ctx context.Context) (context.Context, error) {
 	txFromCtx := ctx.Value(transactionName)
 	if txFromCtx != nil {
 		return ctx, nil
 	}
 
-	tx := r.db.Begin()
+	tx := r.db.WithContext(ctx).Begin()
 
 	if tx.Error != nil {
 		tErr := utilerror.NewError(utilerror.GenericError, "Error beginning transaction.").WithCause(tx.Error)
@@ -79,13 +80,8 @@ func (r *DBrepository) Rollback(ctx context.Context) error {
 // Save is a combination function. If save value does not contain primary key,
 // it will execute Create, otherwise it will execute Update (with all fields).
 func (r *DBrepository) Save(ctx context.Context, value interface{}) error {
-	txFromCtx := ctx.Value(ctxk(transactionName))
-	if txFromCtx == nil {
-		tErr := utilerror.NewError(utilerror.GenericError, "Missing transaction when doing Save.")
-		return tErr
-	}
-	tx := txFromCtx.(*gorm.DB)
-	err := tx.Save(value).Error
+	db := r.GetDBInstance(ctx)
+	err := db.Save(value).Error
 
 	return r.HandleSaveOrUpdateError(err)
 }
@@ -97,7 +93,8 @@ func (r *DBrepository) Save(ctx context.Context, value interface{}) error {
 //	var obj Resource
 //	repository.FindByID(ctx, "an_ID", &obj)
 func (r *DBrepository) FindByID(ctx context.Context, id string, dest interface{}) error {
-	err := r.db.Where("id = ?", id).First(dest).Error
+	db := r.GetDBInstance(ctx)
+	err := db.Where("id = ?", id).First(dest).Error
 
 	var tErr error
 	if err != nil {
@@ -141,7 +138,8 @@ func (r *DBrepository) FindByID(ctx context.Context, id string, dest interface{}
 //	v.Add("sort", "field")  // sort in ascending order
 //	v.Add("sort", "-field") // sort in descending order
 func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) (*domain.ResourcePage, error) {
-	db, limit, err := r.applyLimit(r.db, &v)
+	db := r.GetDBInstance(ctx)
+	db, limit, err := r.applyLimit(db, &v)
 	if err != nil {
 		return nil, err
 	}
@@ -210,4 +208,12 @@ func (r *DBrepository) applyLimit(db *gorm.DB, v *url.Values) (*gorm.DB, int64, 
 
 	v.Del("limit")
 	return applyLimit(db, limit)
+}
+
+func (r *DBrepository) GetDBInstance(ctx context.Context) *gorm.DB {
+	txFromCtx := ctx.Value(ctxk(transactionName))
+	if txFromCtx == nil {
+		txFromCtx = r.db.WithContext(ctx)
+	}
+	return txFromCtx.(*gorm.DB)
 }

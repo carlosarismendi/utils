@@ -29,11 +29,9 @@ func TestSave(t *testing.T) {
 	r := NewDBRepository(dbHolder.DBHolder, nil)
 
 	t.Run("SavingValidResource", func(t *testing.T) {
+		// ARRANGE
 		dbHolder.Reset()
 		createResourceTable(t, r)
-
-		ctx, err := domain.BeginTx(context.Background(), r)
-		require.NoError(t, err)
 
 		resource := Resource{
 			ID:           "0ea57dec-5e79-40dc-b971-a52561fcc2c7",
@@ -41,22 +39,21 @@ func TestSave(t *testing.T) {
 			RandomNumber: 4,
 		}
 
-		err = r.Save(ctx, &resource)
+		// ACT
+		ctx := context.Background()
+		err := r.Save(ctx, &resource)
 		require.NoError(t, err)
 
-		domain.EndTx(ctx, r, &err)
-
+		// ASSERT
 		var actual Resource
 		err = r.FindByID(ctx, resource.ID, &actual)
 		require.NoError(t, err)
 	})
 
 	t.Run("SavingInvalidResource", func(t *testing.T) {
+		// ARRANGE
 		dbHolder.Reset()
 		createResourceTable(t, r)
-
-		ctx, err := domain.BeginTx(context.Background(), r)
-		require.NoError(t, err)
 
 		resource := Resource{
 			ID:           "INVALID_UUID",
@@ -64,12 +61,11 @@ func TestSave(t *testing.T) {
 			RandomNumber: 2,
 		}
 
-		func() {
-			defer domain.EndTx(ctx, r, &err)
+		// ACT
+		err := r.Save(context.Background(), &resource)
 
-			err = r.Save(ctx, &resource)
-			require.Error(t, err)
-		}()
+		// ASSERT
+		require.Error(t, err)
 	})
 }
 
@@ -85,11 +81,9 @@ func TestFind(t *testing.T) {
 	}
 
 	r := NewDBRepository(dbHolder.DBHolder, filtersMap)
-
 	createResourceTable(t, r)
 
-	ctx, err := domain.BeginTx(context.Background(), r)
-	require.NoError(t, err)
+	ctx := context.Background()
 
 	r1 := &Resource{
 		ID:           "5ceff18d-9039-44b5-a5d3-3d99653f4601",
@@ -112,141 +106,137 @@ func TestFind(t *testing.T) {
 	}
 	require.NoError(t, r.Save(ctx, r3))
 
-	domain.EndTx(ctx, r, nil)
+	type findTest struct {
+		name          string
+		filters       url.Values
+		expected      *domain.ResourcePage
+		considerOrder bool
+	}
 
-	t.Run("FindingWithoutFilters", func(t *testing.T) {
-		var resources []*Resource
-		rp, err := r.Find(context.Background(), url.Values{}, &resources)
+	tests := []findTest{
+		{
+			name:    "FindingWithoutFilters",
+			filters: url.Values{},
+			expected: &domain.ResourcePage{
+				Total:     3,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r1, r2, r3},
+			},
+			considerOrder: false,
+		},
+		{
+			name:    "FindingFilteringByTextFieldName",
+			filters: createFilter("name", "Resource1"),
+			expected: &domain.ResourcePage{
+				Total:     1,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r1},
+			},
+			considerOrder: true,
+		},
+		{
+			name:    "FindingFilteringByTextFieldID",
+			filters: createFilter("id", "5ceff18d-9039-44b5-a5d3-3d99653f4603"),
+			expected: &domain.ResourcePage{
+				Total:     1,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r3},
+			},
+			considerOrder: true,
+		},
+		{
+			name:    "FindingFilteringByNumberFieldRandomNumber",
+			filters: createFilter("random_number", "2"),
+			expected: &domain.ResourcePage{
+				Total:     2,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r2, r3},
+			},
+			considerOrder: false,
+		},
+		{
+			name:    "FindingSortingByTextFieldNameAsc",
+			filters: createFilter("sort", "name"),
+			expected: &domain.ResourcePage{
+				Total:     3,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r1, r2, r3},
+			},
+			considerOrder: true,
+		},
+		{
+			name:    "FindingSortingByTextFieldNameDesc",
+			filters: createFilter("sort", "-name"),
+			expected: &domain.ResourcePage{
+				Total:     3,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r3, r2, r1},
+			},
+			considerOrder: true,
+		},
+		{
+			name:    "FindingSortingByFieldRandomNumberAsc",
+			filters: createFilter("sort", "random_number"),
+			expected: &domain.ResourcePage{
+				Total:     3,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r1, r2, r3},
+			},
+			considerOrder: true,
+		},
+		{
+			name:    "FindingSortingByNumFieldRandomNumberDesc",
+			filters: createFilter("sort", "-random_number"),
+			expected: &domain.ResourcePage{
+				Total:     3,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r2, r3, r1},
+			},
+			considerOrder: true,
+		},
+	}
 
-		require.NoError(t, err)
-		require.Equal(t, 3, len(resources))
-		require.Equal(t, int64(3), rp.Total)
-		require.Equal(t, 3, len(*rp.Resources.(*[]*Resource)))
-		require.Equal(t, int64(0), rp.Offset)
-		require.Equal(t, int64(10), rp.Limit)
+	for _, ft := range tests {
+		t.Run(ft.name, func(t *testing.T) {
+			// ARRANGE
+			expectedResources := ft.expected.Resources.([]*Resource)
+			require.EqualValues(t, len(expectedResources), ft.expected.Total, "Expected Total and Resources are not properly set.")
 
-		require.Contains(t, resources, r1)
-		require.Contains(t, resources, r2)
-		require.Contains(t, resources, r3)
-	})
+			// ACT
+			var resources []*Resource
+			rp, err := r.Find(context.Background(), ft.filters, &resources)
 
-	t.Run("FindingFilteringByTextFieldName", func(t *testing.T) {
-		v := url.Values{}
-		v.Add("name", "Resource1")
+			// ASSERT
+			require.NoError(t, err)
+			require.EqualValues(t, ft.expected.Total, len(resources))
+			require.EqualValues(t, ft.expected.Total, rp.Total)
+			require.EqualValues(t, ft.expected.Total, len(*rp.Resources.(*[]*Resource)))
+			require.EqualValues(t, ft.expected.Offset, rp.Offset)
+			require.EqualValues(t, ft.expected.Limit, rp.Limit)
 
-		var resources []*Resource
-		rp, err := r.Find(context.Background(), v, &resources)
+			if ft.considerOrder {
+				require.Equal(t, expectedResources, resources)
+			} else {
+				for _, expRes := range expectedResources {
+					require.Contains(t, resources, expRes)
+				}
+			}
+		})
+	}
+}
 
-		require.NoError(t, err)
-		require.Equal(t, 1, len(resources))
-		require.Equal(t, int64(1), rp.Total)
-		require.Equal(t, 1, len(*rp.Resources.(*[]*Resource)))
-		require.Equal(t, int64(0), rp.Offset)
-		require.Equal(t, int64(10), rp.Limit)
-
-		require.Equal(t, r1, resources[0])
-	})
-
-	t.Run("FindingFilteringByTextFieldID", func(t *testing.T) {
-		v := url.Values{}
-		v.Add("id", "5ceff18d-9039-44b5-a5d3-3d99653f4603")
-
-		var resources []*Resource
-		rp, err := r.Find(context.Background(), v, &resources)
-
-		require.NoError(t, err)
-		require.Equal(t, 1, len(resources))
-		require.Equal(t, int64(1), rp.Total)
-		require.Equal(t, 1, len(*rp.Resources.(*[]*Resource)))
-		require.Equal(t, int64(0), rp.Offset)
-		require.Equal(t, int64(10), rp.Limit)
-
-		require.Equal(t, r3, resources[0])
-	})
-
-	t.Run("FindingFilteringByNumberFieldRandomNumber", func(t *testing.T) {
-		v := url.Values{}
-		v.Add("random_number", "2")
-
-		var resources []*Resource
-		rp, err := r.Find(context.Background(), v, &resources)
-
-		require.NoError(t, err)
-		require.Equal(t, 2, len(resources))
-		require.Equal(t, int64(2), rp.Total)
-		require.Equal(t, 2, len(*rp.Resources.(*[]*Resource)))
-		require.Equal(t, int64(0), rp.Offset)
-		require.Equal(t, int64(10), rp.Limit)
-
-		require.Contains(t, resources, r2)
-		require.Contains(t, resources, r3)
-	})
-
-	t.Run("FindingSortingByTextFieldNameAsc", func(t *testing.T) {
-		v := url.Values{}
-		v.Add("sort", "name")
-
-		var resources []*Resource
-		rp, err := r.Find(context.Background(), v, &resources)
-
-		require.NoError(t, err)
-		require.Equal(t, 3, len(resources))
-		require.Equal(t, int64(3), rp.Total)
-		require.Equal(t, 3, len(*rp.Resources.(*[]*Resource)))
-		require.Equal(t, int64(0), rp.Offset)
-		require.Equal(t, int64(10), rp.Limit)
-
-		require.Equal(t, []*Resource{r1, r2, r3}, resources)
-	})
-
-	t.Run("FindingSortingByTextFieldNameDesc", func(t *testing.T) {
-		v := url.Values{}
-		v.Add("sort", "-name")
-
-		var resources []*Resource
-		rp, err := r.Find(context.Background(), v, &resources)
-
-		require.NoError(t, err)
-		require.Equal(t, 3, len(resources))
-		require.Equal(t, int64(3), rp.Total)
-		require.Equal(t, 3, len(*rp.Resources.(*[]*Resource)))
-		require.Equal(t, int64(0), rp.Offset)
-		require.Equal(t, int64(10), rp.Limit)
-
-		require.Equal(t, []*Resource{r3, r2, r1}, resources)
-	})
-
-	t.Run("FindingSortingByFieldRandomNumberAsc", func(t *testing.T) {
-		v := url.Values{}
-		v.Add("sort", "random_number")
-
-		var resources []*Resource
-		rp, err := r.Find(context.Background(), v, &resources)
-
-		require.NoError(t, err)
-		require.Equal(t, 3, len(resources))
-		require.Equal(t, int64(3), rp.Total)
-		require.Equal(t, 3, len(*rp.Resources.(*[]*Resource)))
-		require.Equal(t, int64(0), rp.Offset)
-		require.Equal(t, int64(10), rp.Limit)
-
-		require.Equal(t, []*Resource{r1, r2, r3}, resources)
-	})
-
-	t.Run("FindingSortingByNumFieldRandomNumberDesc", func(t *testing.T) {
-		v := url.Values{}
-		v.Add("sort", "-random_number")
-
-		var resources []*Resource
-		rp, err := r.Find(context.Background(), v, &resources)
-
-		require.NoError(t, err)
-		require.Equal(t, 3, len(resources))
-		require.Equal(t, int64(3), rp.Total)
-		require.Equal(t, 3, len(*rp.Resources.(*[]*Resource)))
-		require.Equal(t, int64(0), rp.Offset)
-		require.Equal(t, int64(10), rp.Limit)
-
-		require.Equal(t, []*Resource{r2, r3, r1}, resources)
-	})
+func createFilter(key string, values ...string) url.Values {
+	v := url.Values{}
+	for i := range values {
+		v.Add(key, values[i])
+	}
+	return v
 }
