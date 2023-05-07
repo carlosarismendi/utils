@@ -2,6 +2,7 @@ package utilerror
 
 import (
 	"encoding/json"
+	"net/http"
 )
 
 type UtilError struct {
@@ -64,4 +65,28 @@ func GetMessage(err error) string {
 	}
 
 	return err.Error()
+}
+
+func IsResourceNotFound(err error) bool {
+	return GetKey(err) == ResourceNotFoundError
+}
+
+func HTTPCode(err error) int {
+	key := GetKey(err)
+	switch key {
+	case WrongInputParameterError:
+		return http.StatusUnprocessableEntity
+
+	case ResourceNotFoundError:
+		return http.StatusNotFound
+
+	case ResourceAlreadyExistsError:
+		return http.StatusConflict
+
+	case GenericError:
+		return http.StatusTeapot
+
+	default:
+		return http.StatusInternalServerError
+	}
 }
