@@ -21,7 +21,7 @@ const transactionName string = "dbtx"
 // DBrepository is built on top of GORM to provide easier transaction management as
 // well as methods like Save or Find.
 type DBrepository struct {
-	db      *gorm.DB
+	db      *DBHolder
 	filters map[string]filters.Filter
 }
 
@@ -31,7 +31,7 @@ type DBrepository struct {
 // that it is not in the filters map, it will return an error.
 func NewDBRepository(dbHolder *DBHolder, filtersMap map[string]filters.Filter) *DBrepository {
 	return &DBrepository{
-		db:      dbHolder.GetDBInstance(),
+		db:      dbHolder,
 		filters: filtersMap,
 	}
 }
@@ -44,7 +44,7 @@ func (r *DBrepository) Begin(ctx context.Context) (context.Context, error) {
 		return ctx, nil
 	}
 
-	tx := r.db.WithContext(ctx).Begin()
+	tx := r.db.db.WithContext(ctx).Begin()
 
 	if tx.Error != nil {
 		tErr := utilerror.NewError(utilerror.GenericError, "Error beginning transaction.").WithCause(tx.Error)
@@ -211,9 +211,5 @@ func (r *DBrepository) applyLimit(db *gorm.DB, v *url.Values) (*gorm.DB, int64, 
 }
 
 func (r *DBrepository) GetDBInstance(ctx context.Context) *gorm.DB {
-	txFromCtx := ctx.Value(ctxk(transactionName))
-	if txFromCtx == nil {
-		txFromCtx = r.db.WithContext(ctx)
-	}
-	return txFromCtx.(*gorm.DB)
+	return r.db.GetDBInstance(ctx)
 }

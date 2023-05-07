@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -76,8 +77,12 @@ func (d *DBHolder) RunMigrations() error {
 
 // GetDBInstance returns the inner database object *gorm.DB provided by GORM.
 // More on GORM here: https://gorm.io/
-func (d *DBHolder) GetDBInstance() *gorm.DB {
-	return d.db
+func (d *DBHolder) GetDBInstance(ctx context.Context) *gorm.DB {
+	txFromCtx := ctx.Value(ctxk(transactionName))
+	if txFromCtx == nil {
+		txFromCtx = d.db.WithContext(ctx)
+	}
+	return txFromCtx.(*gorm.DB)
 }
 
 func (d *DBHolder) createSchema() {
