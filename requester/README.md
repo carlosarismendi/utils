@@ -54,17 +54,18 @@ resp, body, err := r.Send(&cf,
 
 ## Options
 
-| Option        | Description                                                                                                               | Example                           |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| `AppendPath`  | Appends a path to the current path and url                                                                                | `AppendPath("/api/user")`         |
-| `Body`        | Sets the request body. Currently only marshalls body into json <br> by using `json.Encoder(...)` from `"encoding/json"` . | `Body("/api/user")`               |
-| `ContentType` | Sets the HTTP header Content-Type                                                                                         | `ContentType("application/json")` |
-| `Doer`        | Sets the HTTP client. Default is `http.DefaultClient` from `"net/http"`.                                                  | `Doer(http.DefaultClient)`        |
-| `Get`         | Sets the HTTP method GET.                                                                                                 | `Get("/api/user"))`               |
-| `Post`        | Sets the HTTP method POST.                                                                                                | `Post("/api/user"))`              |
-| `Put`         | Sets the HTTP method PUT.                                                                                                 | `Put("/api/user"))`               |
-| `Patch`       | Sets the HTTP method PATCH.                                                                                               | `Patch("/api/user"))`             |
-| `QueryParam`  | Appends a query parameter to the path.                                                                                    | `QueryParam("color", "green")`    |
-| `URL`         | Sets the base URL.                                                                                                        | `URL("https://catfact.ninja")`    |
+| Option        | Description                                                                                                               | Example                                       |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| `AppendPath`  | Appends a path to the current path and url                                                                                | `AppendPath("/api/user")`                     |
+| `Body`        | Sets the request body. Currently only marshalls body into json <br> by using `json.Encoder(...)` from `"encoding/json"` . | `Body("/api/user")`                           |
+| `ContentType` | Sets the HTTP header Content-Type                                                                                         | `ContentType("application/json")`             |
+| `Doer`        | Sets the HTTP client. Default is `http.DefaultClient` from `"net/http"`.                                                  | `Doer(http.DefaultClient)`                    |
+| `Get`         | Sets the HTTP method GET.                                                                                                 | `Get("/api/user"))`                           |
+| `Header`      | Sets an HTTP header. Overwrites previous values for the given key.                                                        | `Header("Content-Type", "application/json"))` |
+| `Post`        | Sets the HTTP method POST.                                                                                                | `Post("/api/user"))`                          |
+| `Put`         | Sets the HTTP method PUT.                                                                                                 | `Put("/api/user"))`                           |
+| `Patch`       | Sets the HTTP method PATCH.                                                                                               | `Patch("/api/user"))`                         |
+| `QueryParam`  | Appends a query parameter to the path.                                                                                    | `QueryParam("color", "green")`                |
+| `URL`         | Sets the base URL.                                                                                                        | `URL("https://catfact.ninja")`                |
 
 **NOTE** Options will be processed sequentially from left to right, so in case of conflicting options (e.g. a `Post` after a `Get`, both path defined in both options will be considered but the used method will be POST).

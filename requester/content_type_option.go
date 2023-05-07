@@ -1,15 +1,21 @@
 package requester
 
-type ContentTypeOption struct {
-	contentType string
+type HeaderOption struct {
+	key   string
+	value string
 }
 
-func ContentType(contentType string) *ContentTypeOption {
-	return &ContentTypeOption{
-		contentType: contentType,
+func Header(key, value string) *HeaderOption {
+	return &HeaderOption{
+		key:   key,
+		value: value,
 	}
 }
 
-func (o *ContentTypeOption) Apply(req *HTTPRequester) {
-	req.contentType = o.contentType
+func (o *HeaderOption) Apply(req *HTTPRequester) {
+	req.headers.Add(o.key, o.value)
+}
+
+func ContentType(value string) *HeaderOption {
+	return Header("Content-Type", value)
 }

@@ -10,7 +10,7 @@ type HTTPRequester struct {
 	url                 string
 	path                string
 	method              string
-	contentType         string
+	headers             http.Header
 	body                io.Reader
 	containsQueryParams bool
 
@@ -21,7 +21,7 @@ func NewRequester(options ...Option) *HTTPRequester {
 	r := &HTTPRequester{
 		url:                 "",
 		method:              "",
-		contentType:         "",
+		headers:             make(http.Header),
 		body:                nil,
 		containsQueryParams: false,
 		Doer:                http.DefaultClient,
@@ -60,9 +60,7 @@ func (r *HTTPRequester) prepareRequest() (*http.Request, error) {
 		return nil, err
 	}
 
-	if r.contentType != "" {
-		request.Header.Set("Content-Type", r.contentType)
-	}
+	request.Header = r.headers
 
 	return request, nil
 }
