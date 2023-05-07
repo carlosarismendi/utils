@@ -26,8 +26,5 @@ func (d *TestDBHolder) Reset() {
 
 	d.createSchema()
 	d.setSearchPath()
-
-	if d.config.RunMigrationsOnReset {
-		d.RunMigrations()
-	}
+	_ = d.RunMigrations()
 }

@@ -6,6 +6,9 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	migratePostgres "github.com/golang-migrate/migrate/v4/database/postgres"
 
+	// nolint:blank-imports // it is necessary to run the SQL migrations.
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -43,10 +46,10 @@ func NewDBHolder(config *DBConfig) *DBHolder {
 }
 
 // RunMigrations runs SQL migrations found in the folder specified by DBConfig.MigrationsDir
-func (d *DBHolder) RunMigrations() {
+func (d *DBHolder) RunMigrations() error {
 	db, err := d.db.DB()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	config := migratePostgres.Config{
@@ -54,19 +57,21 @@ func (d *DBHolder) RunMigrations() {
 	}
 	driver, err := migratePostgres.WithInstance(db, &config)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	m, err := migrate.NewWithDatabaseInstance(
-		fmt.Sprintf("file:%s", d.config.MigrationsDir),
+		fmt.Sprintf("file://%s", d.config.MigrationsDir),
 		"postgres", driver)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	err = m.Up()
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 // GetDBInstance returns the inner database object *gorm.DB provided by GORM.
