@@ -80,6 +80,12 @@ func HTTPCode(err error) int {
 	case ResourceNotFoundError:
 		return http.StatusNotFound
 
+	case UnauthorizedError:
+		return http.StatusUnauthorized
+
+	case ForbiddenError:
+		return http.StatusForbidden
+
 	case ResourceAlreadyExistsError:
 		return http.StatusConflict
 
