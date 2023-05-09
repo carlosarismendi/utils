@@ -1,4 +1,3 @@
-
 fmt:
 	go fmt ./...
 
@@ -15,5 +14,5 @@ enterpg:
 	docker exec -it utils_pg_1 psql --username "postgres"
 	
 test:
-	go test ./...
+	go test -count=1 ./...
 	
