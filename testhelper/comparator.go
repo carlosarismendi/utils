@@ -69,6 +69,8 @@ func compare(expected, actual interface{}, ignoreFields ...string) bool {
 	if len(ignoreFields) > 0 {
 		if exp.Kind() == reflect.Map {
 			equal = compareMap(exp, act, ignoreFields...)
+		} else if exp.Kind() == reflect.Slice || exp.Kind() == reflect.Array {
+			equal = compareSlice(exp, act, ignoreFields...)
 		} else {
 			equal = cmp.Equal(exp.Interface(), act.Interface(), cmpopts.IgnoreFields(exp.Interface(), ignoreFields...))
 		}
@@ -90,6 +92,21 @@ func compareMap(exp, act reflect.Value, ignoreFields ...string) bool {
 		return false
 	})
 	return cmp.Equal(exp.Interface(), act.Interface(), ignoreFieldsOption)
+}
+
+func compareSlice(exp, act reflect.Value, ignoreFields ...string) bool {
+	if exp.Len() != act.Len() {
+		return false
+	}
+
+	for i := 0; i < exp.Len(); i++ {
+		equal := compare(exp.Index(i).Interface(), act.Index(i).Interface(), ignoreFields...)
+		if !equal {
+			return false
+		}
+	}
+
+	return true
 }
 
 func getErrorMessage(expected, actual interface{}) string {
