@@ -6,45 +6,27 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// If the comparison fails, it kills the execution. When comparing maps,
-// if no ignore field is indicated, this works fine. In case of comparing maps with
-// ignore fields, these map keys must be of type string. Otherwise this function won't work.
-// In this case, it is recommended to use RequireAdvanceCompare method.
+// If the comparison fails, it kills the execution. When comparing maps, ignoreFields
+// only applies for structs that are the values of the map.
 // Uses methods from https://pkg.go.dev/github.com/stretchr/testify/require.
-func RequireCompare(t testing.TB, expected, actual interface{}, ignoreFields ...string) {
+func RequireEqual(t testing.TB, expected, actual interface{}, ignoreFields ...string) {
 	equal := compare(expected, actual, ignoreFields...)
-	require.True(t, equal, getErrorMessage(expected, actual))
+	if !equal {
+		require.Fail(t, getErrorMessage(expected, actual))
+	}
 }
 
 // If the comparison fails, it does not kill the execution.
 // Uses methods from https://pkg.go.dev/github.com/stretchr/testify/assert.
-func AssertCompare(t testing.TB, expected, actual interface{}, ignoreFields ...string) {
+func AssertEqual(t testing.TB, expected, actual interface{}, ignoreFields ...string) {
 	equal := compare(expected, actual, ignoreFields...)
-	assert.True(t, equal, getErrorMessage(expected, actual))
-}
-
-// If the comparison fails, it kills the execution.
-// This is a wrapper function for cmp.Equal provided by the package github.com/google/go-cmp.
-// This just offers a message showing the JSON string for both expected and actual parameter.
-// See https://pkg.go.dev/github.com/google/go-cmp/cmp
-func RequireAdvanceCompare(t testing.TB, expected, actual interface{}, options ...cmp.Option) {
-	equal := cmp.Equal(expected, actual, options...)
-	require.True(t, equal, getErrorMessage(expected, actual))
-}
-
-// If the comparison fails, it does not kill the execution.
-// This is a wrapper function for cmp.Equal provided by the package github.com/google/go-cmp.
-// This just offers a message showing the JSON string for both expected and actual parameter.
-// See https://pkg.go.dev/github.com/google/go-cmp/cmp
-func AssertAdvanceCompare(t testing.TB, expected, actual interface{}, options ...cmp.Option) {
-	equal := cmp.Equal(expected, actual, options...)
-	assert.True(t, equal, getErrorMessage(expected, actual))
+	if !equal {
+		assert.Fail(t, getErrorMessage(expected, actual))
+	}
 }
 
 func compare(expected, actual interface{}, ignoreFields ...string) bool {
@@ -65,36 +47,68 @@ func compare(expected, actual interface{}, ignoreFields ...string) bool {
 		return false
 	}
 
-	var equal bool
-	if len(ignoreFields) > 0 {
-		if exp.Kind() == reflect.Map {
-			equal = compareMap(exp, act, ignoreFields...)
-		} else if exp.Kind() == reflect.Slice || exp.Kind() == reflect.Array {
-			equal = compareSlice(exp, act, ignoreFields...)
-		} else {
-			equal = cmp.Equal(exp.Interface(), act.Interface(), cmpopts.IgnoreFields(exp.Interface(), ignoreFields...))
-		}
-	} else {
-		equal = cmp.Equal(exp.Interface(), act.Interface())
-	}
+	equal := compareValue(exp, act, ignoreFields...)
 
 	return equal
 }
 
-func compareMap(exp, act reflect.Value, ignoreFields ...string) bool {
-	ignoreFieldsOption := cmpopts.IgnoreMapEntries(func(k, v interface{}) bool {
-		for i := range ignoreFields {
-			if k == ignoreFields[i] {
-				return true
-			}
-		}
+func compareValue(exp, act reflect.Value, ignoreFields ...string) bool {
+	switch exp.Kind() {
+	case reflect.Struct:
+		return compareStructs(exp, act, ignoreFields...)
 
-		return false
-	})
-	return cmp.Equal(exp.Interface(), act.Interface(), ignoreFieldsOption)
+	case reflect.Map:
+		return compareMaps(exp, act, ignoreFields...)
+
+	case reflect.Slice, reflect.Array:
+		return compareSlices(exp, act, ignoreFields...)
+
+	default:
+		// Primitive types (int, uint, float, string, complex, bool) and
+		// others that don't fit in previous cases.
+		return exp.Interface() == act.Interface()
+	}
 }
 
-func compareSlice(exp, act reflect.Value, ignoreFields ...string) bool {
+func compareStructs(exp, act reflect.Value, ignoreFields ...string) bool {
+	typ := exp.Type()
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+		if isIgnoreField(field.Name, ignoreFields) {
+			continue
+		}
+
+		equal := compare(exp.Field(i).Interface(), act.Field(i).Interface(), ignoreFields...)
+		if !equal {
+			return false
+		}
+	}
+
+	return true
+}
+
+func compareMaps(exp, act reflect.Value, ignoreFields ...string) bool {
+	if exp.Len() != act.Len() {
+		return false
+	}
+
+	for _, key := range exp.MapKeys() {
+		actValue := act.MapIndex(key)
+		// Key from expected Map doest not exist in actual Map
+		if !actValue.IsValid() {
+			return false
+		}
+
+		equal := compare(exp.MapIndex(key).Interface(), actValue.Interface(), ignoreFields...)
+		if !equal {
+			return false
+		}
+	}
+
+	return true
+}
+
+func compareSlices(exp, act reflect.Value, ignoreFields ...string) bool {
 	if exp.Len() != act.Len() {
 		return false
 	}
@@ -129,6 +143,18 @@ func getValues(expected, actual interface{}) (exp, act reflect.Value, sameType b
 		act = act.Elem()
 	}
 
+	if !exp.IsValid() && !act.IsValid() {
+		return exp, act, true
+	}
+
+	if exp.IsValid() && !act.IsValid() {
+		return exp, act, false
+	}
+
+	if !exp.IsValid() && act.IsValid() {
+		return exp, act, false
+	}
+
 	if exp.Kind() != act.Kind() || exp.Type() != act.Type() {
 		if act.CanConvert(exp.Type()) {
 			act = act.Convert(exp.Type())
@@ -138,4 +164,14 @@ func getValues(expected, actual interface{}) (exp, act reflect.Value, sameType b
 	}
 
 	return exp, act, true
+}
+
+func isIgnoreField(field string, ignoreFields []string) bool {
+	for i := range ignoreFields {
+		if field == ignoreFields[i] {
+			return true
+		}
+	}
+
+	return false
 }

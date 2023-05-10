@@ -24,6 +24,11 @@ func TestCompare(t *testing.T) {
 		*NestedResource
 	}
 
+	type ResourceWithSlice struct {
+		ID  string
+		Arr []*Resource
+	}
+
 	type compareTest struct {
 		name         string
 		resource1    interface{}
@@ -186,37 +191,22 @@ func TestCompare(t *testing.T) {
 		},
 
 		{
-			name: "CompareDifferentMapsIgnoringDifferentKeyValue_returnsEqual",
-			resource1: map[string]int{
-				"field1": 1,
-				"field2": 3,
+			name: "CompareDifferentMapsIgnoringFieldOfInnerStruct_returnsEqual",
+			resource1: map[string]*Resource{
+				"field1": {
+					ID:   "id1",
+					Name: "name1",
+				},
 			},
-			resource2: map[string]int{
-				"field1": 1,
-				"field2": 3000,
+			resource2: map[string]*Resource{
+				"field1": {
+					ID:   "id1",
+					Name: "different",
+				},
 			},
-			ignoreFields: []string{"field2"},
+			ignoreFields: []string{"Name"},
 			equal:        true,
 		},
-
-		// TODO: implement ignore fields for inner structs of maps
-		// {
-		// 	name: "CompareDifferentMapsIgnoringFieldOfInnerStruct_returnsEqual",
-		// 	resource1: map[string]*Resource{
-		// 		"field1": &Resource{
-		// 			ID:   "id1",
-		// 			Name: "name1",
-		// 		},
-		// 	},
-		// 	resource2: map[string]*Resource{
-		// 		"field1": &Resource{
-		// 			ID:   "id1",
-		// 			Name: "different",
-		// 		},
-		// 	},
-		// 	ignoreFields: []string{"Name"},
-		// 	equal:        true,
-		// },
 
 		{
 			name:         "CompareEqualSlicesOfInts_returnsEqual",
@@ -229,21 +219,21 @@ func TestCompare(t *testing.T) {
 		{
 			name: "CompareEqualSlicesOfValueStructs_returnsEqual",
 			resource1: []Resource{
-				Resource{
+				{
 					ID:   "id",
 					Name: "name",
 				},
-				Resource{
+				{
 					ID:   "id2",
 					Name: "name2",
 				},
 			},
 			resource2: []Resource{
-				Resource{
+				{
 					ID:   "id",
 					Name: "name",
 				},
-				Resource{
+				{
 					ID:   "id2",
 					Name: "name2",
 				},
@@ -255,21 +245,21 @@ func TestCompare(t *testing.T) {
 		{
 			name: "CompareEqualSlicesOfPointerStructs_returnsEqual",
 			resource1: []*Resource{
-				&Resource{
+				{
 					ID:   "id",
 					Name: "name",
 				},
-				&Resource{
+				{
 					ID:   "id2",
 					Name: "name2",
 				},
 			},
 			resource2: []*Resource{
-				&Resource{
+				{
 					ID:   "id",
 					Name: "name",
 				},
-				&Resource{
+				{
 					ID:   "id2",
 					Name: "name2",
 				},
@@ -281,21 +271,21 @@ func TestCompare(t *testing.T) {
 		{
 			name: "CompareDifferentSlicesOfValueStructsIgnoringDifferentField_returnsEqual",
 			resource1: []Resource{
-				Resource{
+				{
 					ID:   "id",
 					Name: "name",
 				},
-				Resource{
+				{
 					ID:   "id2",
 					Name: "name2",
 				},
 			},
 			resource2: []Resource{
-				Resource{
+				{
 					ID:   "id",
 					Name: "name",
 				},
-				Resource{
+				{
 					ID:   "id2",
 					Name: "different",
 				},
@@ -307,23 +297,47 @@ func TestCompare(t *testing.T) {
 		{
 			name: "CompareDifferentSlicesOfPointerStructsIgnoringDifferentField_returnsEqual",
 			resource1: []*Resource{
-				&Resource{
+				{
 					ID:   "id",
 					Name: "name",
 				},
-				&Resource{
+				{
 					ID:   "id2",
 					Name: "name2",
 				},
 			},
 			resource2: []*Resource{
-				&Resource{
+				{
 					ID:   "id",
 					Name: "name",
 				},
-				&Resource{
+				{
 					ID:   "id2",
 					Name: "different",
+				},
+			},
+			ignoreFields: []string{"Name"},
+			equal:        true,
+		},
+
+		{
+			name: "CompareDifferentResourcesWithDifferentFieldInInnerResourceOfSlice_returnEqual",
+			resource1: ResourceWithSlice{
+				ID: "id",
+				Arr: []*Resource{
+					{
+						ID:   "id",
+						Name: "name1",
+					},
+				},
+			},
+			resource2: ResourceWithSlice{
+				ID: "id",
+				Arr: []*Resource{
+					{
+						ID:   "id",
+						Name: "different",
+					},
 				},
 			},
 			ignoreFields: []string{"Name"},
