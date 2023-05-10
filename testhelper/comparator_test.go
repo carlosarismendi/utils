@@ -2,6 +2,7 @@ package testhelper
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -34,7 +35,6 @@ func TestCompare(t *testing.T) {
 		resource1    interface{}
 		resource2    interface{}
 		ignoreFields []string
-		equal        bool
 	}
 
 	tests := []compareTest{
@@ -57,7 +57,6 @@ func TestCompare(t *testing.T) {
 				},
 			},
 			ignoreFields: []string{},
-			equal:        true,
 		},
 
 		{
@@ -79,7 +78,6 @@ func TestCompare(t *testing.T) {
 				},
 			},
 			ignoreFields: []string{},
-			equal:        true,
 		},
 
 		{
@@ -101,7 +99,6 @@ func TestCompare(t *testing.T) {
 				},
 			},
 			ignoreFields: []string{},
-			equal:        true,
 		},
 
 		{
@@ -119,7 +116,6 @@ func TestCompare(t *testing.T) {
 				},
 			},
 			ignoreFields: []string{"Nested"},
-			equal:        true,
 		},
 
 		{
@@ -137,7 +133,6 @@ func TestCompare(t *testing.T) {
 				},
 			},
 			ignoreFields: []string{"NestedResource"},
-			equal:        true,
 		},
 
 		{
@@ -155,7 +150,6 @@ func TestCompare(t *testing.T) {
 				},
 			},
 			ignoreFields: []string{"NestedResource"},
-			equal:        true,
 		},
 
 		{
@@ -173,7 +167,6 @@ func TestCompare(t *testing.T) {
 				},
 			},
 			ignoreFields: []string{"NestedResource"},
-			equal:        true,
 		},
 
 		{
@@ -187,7 +180,6 @@ func TestCompare(t *testing.T) {
 				"field2": 3,
 			},
 			ignoreFields: []string{},
-			equal:        true,
 		},
 
 		{
@@ -205,7 +197,6 @@ func TestCompare(t *testing.T) {
 				},
 			},
 			ignoreFields: []string{"Name"},
-			equal:        true,
 		},
 
 		{
@@ -213,7 +204,6 @@ func TestCompare(t *testing.T) {
 			resource1:    []int{1, 2, 3},
 			resource2:    []int{1, 2, 3},
 			ignoreFields: []string{},
-			equal:        true,
 		},
 
 		{
@@ -239,7 +229,6 @@ func TestCompare(t *testing.T) {
 				},
 			},
 			ignoreFields: []string{},
-			equal:        true,
 		},
 
 		{
@@ -265,7 +254,6 @@ func TestCompare(t *testing.T) {
 				},
 			},
 			ignoreFields: []string{},
-			equal:        true,
 		},
 
 		{
@@ -291,7 +279,6 @@ func TestCompare(t *testing.T) {
 				},
 			},
 			ignoreFields: []string{"Name"},
-			equal:        true,
 		},
 
 		{
@@ -317,7 +304,6 @@ func TestCompare(t *testing.T) {
 				},
 			},
 			ignoreFields: []string{"Name"},
-			equal:        true,
 		},
 
 		{
@@ -341,16 +327,27 @@ func TestCompare(t *testing.T) {
 				},
 			},
 			ignoreFields: []string{"Name"},
-			equal:        true,
+		},
+
+		{
+			name:         "CompareEqualTimestamps_returnEqual",
+			resource1:    time.Date(2022, 10, 5, 10, 49, 8, 1, time.UTC),
+			resource2:    time.Date(2022, 10, 5, 10, 49, 8, 1, time.UTC),
+			ignoreFields: []string{},
+		},
+
+		{
+			name:         "CompareStructWithEqualTimestamps_returnEqual",
+			resource1:    struct{ Timestamp time.Time }{Timestamp: time.Date(2022, 10, 5, 10, 49, 8, 1, time.UTC)},
+			resource2:    struct{ Timestamp time.Time }{Timestamp: time.Date(2022, 10, 5, 10, 49, 8, 1, time.UTC)},
+			ignoreFields: []string{},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			equal := compare(test.resource1, test.resource2, test.ignoreFields...)
-			if test.equal != equal {
-				require.Fail(t, getErrorMessage(test.resource1, test.resource2))
-			}
+			require.True(t, equal, getErrorMessage(test.resource1, test.resource2))
 		})
 	}
 }

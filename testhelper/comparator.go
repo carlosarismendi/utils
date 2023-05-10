@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -72,6 +73,12 @@ func compareValue(exp, act reflect.Value, ignoreFields ...string) bool {
 
 func compareStructs(exp, act reflect.Value, ignoreFields ...string) bool {
 	typ := exp.Type()
+	if exp.Type() == reflect.TypeOf(time.Time{}) {
+		tExp := exp.Interface().(time.Time)
+		tAct := act.Interface().(time.Time)
+		return tExp.Equal(tAct)
+	}
+
 	for i := 0; i < typ.NumField(); i++ {
 		field := typ.Field(i)
 		if isIgnoreField(field.Name, ignoreFields) {
