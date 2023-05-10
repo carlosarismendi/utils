@@ -13,6 +13,7 @@ import (
 
 // If the comparison fails, it kills the execution. When comparing maps, ignoreFields
 // only applies for structs that are the values of the map.
+// Unexported fields are ignored.
 // Uses methods from https://pkg.go.dev/github.com/stretchr/testify/require.
 func RequireEqual(t testing.TB, expected, actual interface{}, ignoreFields ...string) {
 	equal := compare(expected, actual, ignoreFields...)
@@ -21,7 +22,9 @@ func RequireEqual(t testing.TB, expected, actual interface{}, ignoreFields ...st
 	}
 }
 
-// If the comparison fails, it does not kill the execution.
+// If the comparison fails, it does not kill the execution. When comparing maps, ignoreFields
+// only applies for structs that are the values of the map.
+// Unexported fields are ignored.
 // Uses methods from https://pkg.go.dev/github.com/stretchr/testify/assert.
 func AssertEqual(t testing.TB, expected, actual interface{}, ignoreFields ...string) {
 	equal := compare(expected, actual, ignoreFields...)
@@ -81,7 +84,7 @@ func compareStructs(exp, act reflect.Value, ignoreFields ...string) bool {
 
 	for i := 0; i < typ.NumField(); i++ {
 		field := typ.Field(i)
-		if isIgnoreField(field.Name, ignoreFields) {
+		if !field.IsExported() || isIgnoreField(field.Name, ignoreFields) {
 			continue
 		}
 
