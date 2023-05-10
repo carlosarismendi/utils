@@ -2,9 +2,11 @@ package testhelper
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-func TestRequireCompare(t *testing.T) {
+func TestCompare(t *testing.T) {
 	type NestedResource struct {
 		InnerID string
 		Number  int
@@ -22,308 +24,319 @@ func TestRequireCompare(t *testing.T) {
 		*NestedResource
 	}
 
-	t.Run("CompareEqualPointerStructs_returnsNoError", func(t *testing.T) {
-		// ARRANGE
-		r1 := &Resource{
-			ID:   "id",
-			Name: "name",
-			Nested: &NestedResource{
-				InnerID: "innerID",
-				Number:  25,
+	type compareTest struct {
+		name         string
+		resource1    interface{}
+		resource2    interface{}
+		ignoreFields []string
+		equal        bool
+	}
+
+	tests := []compareTest{
+		{
+			name: "CompareEqualPointerStructs_returnsEqual",
+			resource1: &Resource{
+				ID:   "id",
+				Name: "name",
+				Nested: &NestedResource{
+					InnerID: "innerID",
+					Number:  25,
+				},
 			},
-		}
-
-		r2 := &Resource{
-			ID:   "id",
-			Name: "name",
-			Nested: &NestedResource{
-				InnerID: "innerID",
-				Number:  25,
+			resource2: &Resource{
+				ID:   "id",
+				Name: "name",
+				Nested: &NestedResource{
+					InnerID: "innerID",
+					Number:  25,
+				},
 			},
-		}
+			ignoreFields: []string{},
+			equal:        true,
+		},
 
-		// ACT
-		RequireCompare(t, r1, r2)
-	})
-
-	t.Run("CompareEqualValueStructs_returnsNoError", func(t *testing.T) {
-		// ARRANGE
-		r1 := Resource{
-			ID:   "id",
-			Name: "name",
-			Nested: &NestedResource{
-				InnerID: "innerID",
-				Number:  25,
+		{
+			name: "CompareEqualValueStructs_returnsEqual",
+			resource1: Resource{
+				ID:   "id",
+				Name: "name",
+				Nested: &NestedResource{
+					InnerID: "innerID",
+					Number:  25,
+				},
 			},
-		}
-
-		r2 := Resource{
-			ID:   "id",
-			Name: "name",
-			Nested: &NestedResource{
-				InnerID: "innerID",
-				Number:  25,
+			resource2: Resource{
+				ID:   "id",
+				Name: "name",
+				Nested: &NestedResource{
+					InnerID: "innerID",
+					Number:  25,
+				},
 			},
-		}
+			ignoreFields: []string{},
+			equal:        true,
+		},
 
-		// ACT
-		RequireCompare(t, r1, r2)
-	})
-
-	t.Run("CompareEqualStructsOnePointerOneValue_returnsNoError", func(t *testing.T) {
-		// ARRANGE
-		r1 := &Resource{
-			ID:   "id",
-			Name: "name",
-			Nested: &NestedResource{
-				InnerID: "innerID",
-				Number:  25,
+		{
+			name: "CompareEqualStructsOnePointerOneValue_returnsEqual",
+			resource1: &Resource{
+				ID:   "id",
+				Name: "name",
+				Nested: &NestedResource{
+					InnerID: "innerID",
+					Number:  25,
+				},
 			},
-		}
-
-		r2 := Resource{
-			ID:   "id",
-			Name: "name",
-			Nested: &NestedResource{
-				InnerID: "innerID",
-				Number:  25,
+			resource2: Resource{
+				ID:   "id",
+				Name: "name",
+				Nested: &NestedResource{
+					InnerID: "innerID",
+					Number:  25,
+				},
 			},
-		}
+			ignoreFields: []string{},
+			equal:        true,
+		},
 
-		// ACT
-		RequireCompare(t, r1, r2)
-	})
-
-	t.Run("CompareDifferentValueStructsIgnoringTheDifferentField_returnsNoError", func(t *testing.T) {
-		// ARRANGE
-		r1 := Resource{
-			ID:   "id",
-			Name: "name",
-		}
-
-		r2 := Resource{
-			ID:   "id",
-			Name: "name",
-			Nested: &NestedResource{
-				InnerID: "innerID",
-				Number:  25,
+		{
+			name: "CompareDifferentValueStructsIgnoringTheDifferentField_returnsEqual",
+			resource1: Resource{
+				ID:   "id",
+				Name: "name",
 			},
-		}
-
-		// ACT
-		RequireCompare(t, r1, r2, "Nested")
-	})
-
-	t.Run("CompareDifferentPointerStructsIgnoringTheDifferentFieldThatIsInheritance_returnsNoError", func(t *testing.T) {
-		// ARRANGE
-		r1 := &InheritanceResource{
-			ID:   "id",
-			Name: "name",
-		}
-
-		r2 := &InheritanceResource{
-			ID:   "id",
-			Name: "name",
-			NestedResource: &NestedResource{
-				InnerID: "innerID",
-				Number:  25,
+			resource2: Resource{
+				ID:   "id",
+				Name: "name",
+				Nested: &NestedResource{
+					InnerID: "innerID",
+					Number:  25,
+				},
 			},
-		}
+			ignoreFields: []string{"Nested"},
+			equal:        true,
+		},
 
-		// ACT
-		RequireCompare(t, r1, r2, "NestedResource")
-	})
-
-	t.Run("CompareDifferentValueStructsIgnoringTheDifferentFieldThatIsInheritance_returnsNoError", func(t *testing.T) {
-		// ARRANGE
-		r1 := InheritanceResource{
-			ID:   "id",
-			Name: "name",
-		}
-
-		r2 := InheritanceResource{
-			ID:   "id",
-			Name: "name",
-			NestedResource: &NestedResource{
-				InnerID: "innerID",
-				Number:  25,
+		{
+			name: "CompareDifferentPointerStructsIgnoringTheDifferentFieldThatIsInheritance_returnsEqual",
+			resource1: &InheritanceResource{
+				ID:   "id",
+				Name: "name",
 			},
-		}
-
-		// ACT
-		RequireCompare(t, r1, r2, "NestedResource")
-	})
-
-	t.Run("CompareDifferentStructsIgnoringDifferentFieldThatIsInheritanceOneValueOnePointer"+
-		"_returnsNoError", func(t *testing.T) {
-		// ARRANGE
-		r1 := &InheritanceResource{
-			ID:   "id",
-			Name: "name",
-		}
-
-		r2 := InheritanceResource{
-			ID:   "id",
-			Name: "name",
-			NestedResource: &NestedResource{
-				InnerID: "innerID",
-				Number:  25,
+			resource2: &InheritanceResource{
+				ID:   "id",
+				Name: "name",
+				NestedResource: &NestedResource{
+					InnerID: "innerID",
+					Number:  25,
+				},
 			},
-		}
+			ignoreFields: []string{"NestedResource"},
+			equal:        true,
+		},
 
-		// ACT
-		RequireCompare(t, r1, r2, "NestedResource")
-	})
+		{
+			name: "CompareDifferentValueStructsIgnoringTheDifferentFieldThatIsInheritance_returnsNoError",
+			resource1: InheritanceResource{
+				ID:   "id",
+				Name: "name",
+			},
+			resource2: InheritanceResource{
+				ID:   "id",
+				Name: "name",
+				NestedResource: &NestedResource{
+					InnerID: "innerID",
+					Number:  25,
+				},
+			},
+			ignoreFields: []string{"NestedResource"},
+			equal:        true,
+		},
 
-	t.Run("CompareEqualMaps_returnsNoError", func(t *testing.T) {
-		// ARRANGE
-		m1 := map[string]int{
-			"field1": 1,
-			"field2": 3,
-		}
+		{
+			name: "CompareDifferentStructsIgnoringDifferentFieldThatIsInheritanceOneValueOnePointer_returnsEqual",
+			resource1: &InheritanceResource{
+				ID:   "id",
+				Name: "name",
+			},
+			resource2: InheritanceResource{
+				ID:   "id",
+				Name: "name",
+				NestedResource: &NestedResource{
+					InnerID: "innerID",
+					Number:  25,
+				},
+			},
+			ignoreFields: []string{"NestedResource"},
+			equal:        true,
+		},
 
-		m2 := map[string]int{
-			"field1": 1,
-			"field2": 3,
-		}
+		{
+			name: "CompareEqualMaps_returnsEqual",
+			resource1: map[string]int{
+				"field1": 1,
+				"field2": 3,
+			},
+			resource2: map[string]int{
+				"field1": 1,
+				"field2": 3,
+			},
+			ignoreFields: []string{},
+			equal:        true,
+		},
 
-		// ACT
-		RequireCompare(t, m1, m2)
-	})
+		{
+			name: "CompareDifferentMapsIgnoringDifferentKeyValue_returnsEqual",
+			resource1: map[string]int{
+				"field1": 1,
+				"field2": 3,
+			},
+			resource2: map[string]int{
+				"field1": 1,
+				"field2": 3000,
+			},
+			ignoreFields: []string{"field2"},
+			equal:        true,
+		},
 
-	t.Run("CompareDifferentMapsIgnoringDifferentField_returnsNoError", func(t *testing.T) {
-		// ARRANGE
-		m1 := map[string]int{
-			"field1": 1,
-			"field2": 3,
-		}
+		// TODO: implement ignore fields for inner structs of maps
+		// {
+		// 	name: "CompareDifferentMapsIgnoringFieldOfInnerStruct_returnsEqual",
+		// 	resource1: map[string]*Resource{
+		// 		"field1": &Resource{
+		// 			ID:   "id1",
+		// 			Name: "name1",
+		// 		},
+		// 	},
+		// 	resource2: map[string]*Resource{
+		// 		"field1": &Resource{
+		// 			ID:   "id1",
+		// 			Name: "different",
+		// 		},
+		// 	},
+		// 	ignoreFields: []string{"Name"},
+		// 	equal:        true,
+		// },
 
-		m2 := map[string]int{
-			"field1": 1,
-			"field2": 3000,
-		}
+		{
+			name:         "CompareEqualSlicesOfInts_returnsEqual",
+			resource1:    []int{1, 2, 3},
+			resource2:    []int{1, 2, 3},
+			ignoreFields: []string{},
+			equal:        true,
+		},
 
-		// ACT
-		RequireCompare(t, m1, m2, "field2")
-	})
+		{
+			name: "CompareEqualSlicesOfValueStructs_returnsEqual",
+			resource1: []Resource{
+				Resource{
+					ID:   "id",
+					Name: "name",
+				},
+				Resource{
+					ID:   "id2",
+					Name: "name2",
+				},
+			},
+			resource2: []Resource{
+				Resource{
+					ID:   "id",
+					Name: "name",
+				},
+				Resource{
+					ID:   "id2",
+					Name: "name2",
+				},
+			},
+			ignoreFields: []string{},
+			equal:        true,
+		},
 
-	t.Run("CompareEqualSlicesOfInts_returnsNoError", func(t *testing.T) {
-		// ARRANGE
-		s1 := []int{1, 2, 3}
+		{
+			name: "CompareEqualSlicesOfPointerStructs_returnsEqual",
+			resource1: []*Resource{
+				&Resource{
+					ID:   "id",
+					Name: "name",
+				},
+				&Resource{
+					ID:   "id2",
+					Name: "name2",
+				},
+			},
+			resource2: []*Resource{
+				&Resource{
+					ID:   "id",
+					Name: "name",
+				},
+				&Resource{
+					ID:   "id2",
+					Name: "name2",
+				},
+			},
+			ignoreFields: []string{},
+			equal:        true,
+		},
 
-		s2 := []int{1, 2, 3}
+		{
+			name: "CompareDifferentSlicesOfValueStructsIgnoringDifferentField_returnsEqual",
+			resource1: []Resource{
+				Resource{
+					ID:   "id",
+					Name: "name",
+				},
+				Resource{
+					ID:   "id2",
+					Name: "name2",
+				},
+			},
+			resource2: []Resource{
+				Resource{
+					ID:   "id",
+					Name: "name",
+				},
+				Resource{
+					ID:   "id2",
+					Name: "different",
+				},
+			},
+			ignoreFields: []string{"Name"},
+			equal:        true,
+		},
 
-		// ACT
-		RequireCompare(t, s1, s2)
-	})
+		{
+			name: "CompareDifferentSlicesOfPointerStructsIgnoringDifferentField_returnsEqual",
+			resource1: []*Resource{
+				&Resource{
+					ID:   "id",
+					Name: "name",
+				},
+				&Resource{
+					ID:   "id2",
+					Name: "name2",
+				},
+			},
+			resource2: []*Resource{
+				&Resource{
+					ID:   "id",
+					Name: "name",
+				},
+				&Resource{
+					ID:   "id2",
+					Name: "different",
+				},
+			},
+			ignoreFields: []string{"Name"},
+			equal:        true,
+		},
+	}
 
-	t.Run("CompareEqualSlicesOfValueStructs_returnsNoError", func(t *testing.T) {
-		// ARRANGE
-		r1 := Resource{
-			ID:   "id",
-			Name: "name",
-		}
-
-		r2 := Resource{
-			ID:   "id2",
-			Name: "name2",
-		}
-
-		s1 := []Resource{r1, r2}
-
-		s2 := []Resource{r1, r2}
-
-		// ACT
-		RequireCompare(t, s1, s2)
-	})
-
-	t.Run("CompareEqualSlicesOfPointerStructs_returnsNoError", func(t *testing.T) {
-		// ARRANGE
-		r1 := Resource{
-			ID:   "id",
-			Name: "name",
-		}
-
-		r2 := Resource{
-			ID:   "id2",
-			Name: "name2",
-		}
-
-		r11 := Resource{
-			ID:   "id",
-			Name: "name",
-		}
-
-		r22 := Resource{
-			ID:   "id2",
-			Name: "name2",
-		}
-
-		s1 := []*Resource{&r1, &r2}
-
-		s2 := []*Resource{&r11, &r22}
-
-		// ACT
-		RequireCompare(t, s1, s2)
-	})
-
-	t.Run("CompareDifferentSlicesOfValueStructsIgnoringDifferentField_returnsNoError", func(t *testing.T) {
-		// ARRANGE
-		r1 := Resource{
-			ID:   "id",
-			Name: "name",
-		}
-
-		r2 := Resource{
-			ID:   "id2",
-			Name: "name2",
-		}
-
-		r11 := Resource{
-			ID:   "id",
-			Name: "name",
-		}
-
-		r22 := Resource{
-			ID:   "id2",
-			Name: "name",
-		}
-
-		s1 := []Resource{r1, r2}
-
-		s2 := []Resource{r11, r22}
-
-		// ACT
-		RequireCompare(t, s1, s2, "Name")
-	})
-
-	t.Run("CompareDifferentSlicesOfPointerStructsIgnoringDifferentField_returnsNoError", func(t *testing.T) {
-		// ARRANGE
-		r1 := Resource{
-			ID:   "id",
-			Name: "name",
-		}
-
-		r2 := Resource{
-			ID:   "id2",
-			Name: "name2",
-		}
-
-		r11 := Resource{
-			ID:   "id",
-			Name: "name",
-		}
-
-		r22 := Resource{
-			ID:   "id2",
-			Name: "name",
-		}
-
-		s1 := []*Resource{&r1, &r2}
-
-		s2 := []*Resource{&r11, &r22}
-
-		// ACT
-		RequireCompare(t, s1, s2, "Name")
-	})
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			equal := compare(test.resource1, test.resource2, test.ignoreFields...)
+			if test.equal != equal {
+				require.Fail(t, getErrorMessage(test.resource1, test.resource2))
+			}
+		})
+	}
 }
