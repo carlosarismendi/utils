@@ -3,6 +3,7 @@ package requester
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -40,7 +41,7 @@ func TestRequester_GET(t *testing.T) {
 		require.Equal(t, cf, jsonCf)
 	})
 
-	t.Run("sendingGetRequestWithQueryParams_returnsResources", func(t *testing.T) {
+	t.Run("sendingGetRequestUsingMultipleQueryParamOption_returnsResources", func(t *testing.T) {
 		// ARRANGE
 		r := NewRequester(
 			URL("https://datausa.io"),
@@ -64,6 +65,49 @@ func TestRequester_GET(t *testing.T) {
 			AppendPath("/data"),
 			QueryParam("drilldowns", "Nation"),
 			QueryParam("measures", "Population"),
+		)
+
+		// ASSERT
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotEmpty(t, body)
+		require.NoError(t, resp.Body.Close())
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		require.NotEmpty(t, dusa.Data)
+		require.NotEmpty(t, dusa.Source)
+		require.NotEmpty(t, dusa.Source[0].Measures)
+
+		require.Equal(t, "United States", dusa.Data[0].Nation)
+		require.Equal(t, "Population", dusa.Source[0].Measures[0])
+	})
+
+	t.Run("sendingGetRequestUsingASingleQueryParamsOption_returnsResources", func(t *testing.T) {
+		// ARRANGE
+		r := NewRequester(
+			URL("https://datausa.io"),
+		)
+
+		// ACT
+		type Population struct {
+			Nation string `json:"Nation"`
+		}
+		type Measure struct {
+			Measures []string `json:"measures"`
+		}
+		type DataUSA struct {
+			Data   []*Population `json:"data"`
+			Source []*Measure    `json:"source"`
+		}
+
+		v := url.Values{}
+		v.Add("drilldowns", "Nation")
+		v.Add("measures", "Population")
+		var dusa DataUSA
+		resp, body, err := r.Send(&dusa,
+			Get("/api"),
+			AppendPath("/data"),
+			QueryParams(v),
 		)
 
 		// ASSERT

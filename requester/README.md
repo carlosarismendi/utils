@@ -66,6 +66,7 @@ resp, body, err := r.Send(&cf,
 | `Put`         | Sets the HTTP method PUT.                                                                                                 | `Put("/api/user"))`                           |
 | `Patch`       | Sets the HTTP method PATCH.                                                                                               | `Patch("/api/user"))`                         |
 | `QueryParam`  | Appends a query parameter to the path.                                                                                    | `QueryParam("color", "green")`                |
+| `QueryParams` | Appends multiple query parameters to the path.                                                                            | `QueryParams(url.Values{})`                   |
 | `URL`         | Sets the base URL.                                                                                                        | `URL("https://catfact.ninja")`                |
 
 **NOTE** Options will be processed sequentially from left to right, so in case of conflicting options (e.g. a `Post` after a `Get`, both path defined in both options will be considered but the used method will be POST).
