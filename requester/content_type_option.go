@@ -13,7 +13,7 @@ func Header(key, value string) *HeaderOption {
 }
 
 func (o *HeaderOption) Apply(req *HTTPRequester) {
-	req.headers.Add(o.key, o.value)
+	req.headers.Set(o.key, o.value)
 }
 
 func ContentType(value string) *HeaderOption {
