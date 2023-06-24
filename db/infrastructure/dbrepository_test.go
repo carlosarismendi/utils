@@ -314,6 +314,34 @@ func TestFind(t *testing.T) {
 			},
 			considerOrder: true,
 		},
+		{
+			name: "FindingSortingByNumFieldRandomNumberDescAnLimitTwo",
+			filters: createFilters(
+				newFilter("sort", "-random_number"),
+				newFilter("limit", "2"),
+			),
+			expected: &domain.ResourcePage{
+				Total:     2,
+				Limit:     2,
+				Offset:    0,
+				Resources: []*Resource{r2, r3},
+			},
+			considerOrder: true,
+		},
+		{
+			name: "FindingSortingByNumFieldRandomNumberDescAnOffset2",
+			filters: createFilters(
+				newFilter("sort", "-random_number"),
+				newFilter("offset", "2"),
+			),
+			expected: &domain.ResourcePage{
+				Total:     1,
+				Limit:     10,
+				Offset:    2,
+				Resources: []*Resource{r1},
+			},
+			considerOrder: true,
+		},
 	}
 
 	for _, ft := range tests {
@@ -345,10 +373,32 @@ func TestFind(t *testing.T) {
 	}
 }
 
+type filter struct {
+	key    string
+	values []string
+}
+
+func newFilter(key string, values ...string) *filter {
+	return &filter{
+		key:    key,
+		values: values,
+	}
+}
+
+func createFilters(fs ...*filter) url.Values {
+	v := url.Values{}
+	for _, f := range fs {
+		for _, value := range f.values {
+			v.Add(f.key, value)
+		}
+	}
+	return v
+}
+
 func createFilter(key string, values ...string) url.Values {
 	v := url.Values{}
-	for i := range values {
-		v.Add(key, values[i])
+	for _, value := range values {
+		v.Add(key, value)
 	}
 	return v
 }

@@ -144,6 +144,11 @@ func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) 
 		return nil, err
 	}
 
+	db, offset, err := r.applyOffset(db, &v)
+	if err != nil {
+		return nil, err
+	}
+
 	for key, values := range v {
 		if len(values) == 0 {
 			continue
@@ -171,6 +176,7 @@ func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) 
 	rp := &domain.ResourcePage{
 		Total:     result.RowsAffected,
 		Limit:     limit,
+		Offset:    offset,
 		Resources: dst,
 	}
 
@@ -208,6 +214,18 @@ func (r *DBrepository) applyLimit(db *gorm.DB, v *url.Values) (*gorm.DB, int64, 
 
 	v.Del("limit")
 	return applyLimit(db, limit)
+}
+
+func (r *DBrepository) applyOffset(db *gorm.DB, v *url.Values) (*gorm.DB, int64, error) {
+	values, ok := (*v)["offset"]
+	if !ok {
+		return db, 0, nil
+	}
+
+	offset := values[0]
+
+	v.Del("offset")
+	return applyOffset(db, offset)
 }
 
 func (r *DBrepository) GetDBInstance(ctx context.Context) *gorm.DB {
