@@ -5,5 +5,5 @@ import (
 )
 
 type Filter interface {
-	Apply(db *gorm.DB, value string) (*gorm.DB, error)
+	Apply(db *gorm.DB, values []string) (*gorm.DB, error)
 }

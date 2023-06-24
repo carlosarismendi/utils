@@ -20,13 +20,13 @@ func NumField(field string) *NumFieldFilter {
 	}
 }
 
-func (f *NumFieldFilter) Apply(db *gorm.DB, value string) (*gorm.DB, error) {
-	err := domain.CheckEmptyValue(f.field, value)
+func (f *NumFieldFilter) Apply(db *gorm.DB, values []string) (*gorm.DB, error) {
+	err := domain.CheckEmptyValue(f.field, values[0])
 	if err != nil {
 		return nil, err
 	}
 
-	num, err := strconv.ParseInt(value, 10, 64)
+	num, err := strconv.ParseInt(values[0], 10, 64)
 	if err != nil {
 		errMsg := fmt.Sprintf("Invalid value for filter %q. It must be a number.", f.field)
 		return nil, utilerror.NewError(utilerror.WrongInputParameterError, errMsg).WithCause(err)

@@ -189,7 +189,7 @@ func TestFind(t *testing.T) {
 		"id":            filters.TextField("id"),
 		"name":          filters.TextField("name"),
 		"random_number": filters.NumField("random_number"),
-		"sort":          filters.Sorter(),
+		"sort":          filters.Sorter("name", "random_number"),
 	}
 
 	r := NewDBRepository(dbHolder.DBHolder, filtersMap)
@@ -218,6 +218,13 @@ func TestFind(t *testing.T) {
 	}
 	require.NoError(t, r.Save(ctx, r3))
 
+	r4 := &Resource{
+		ID:           "5ceff18d-9039-44b5-a5d3-3d99653f4604",
+		Name:         "Resource3",
+		RandomNumber: 1,
+	}
+	require.NoError(t, r.Save(ctx, r4))
+
 	type findTest struct {
 		name          string
 		filters       url.Values
@@ -230,10 +237,10 @@ func TestFind(t *testing.T) {
 			name:    "FindingWithoutFilters",
 			filters: url.Values{},
 			expected: &domain.ResourcePage{
-				Total:     3,
+				Total:     4,
 				Limit:     10,
 				Offset:    0,
-				Resources: []*Resource{r1, r2, r3},
+				Resources: []*Resource{r1, r2, r4, r3},
 			},
 			considerOrder: false,
 		},
@@ -274,10 +281,10 @@ func TestFind(t *testing.T) {
 			name:    "FindingSortingByTextFieldNameAsc",
 			filters: createFilter("sort", "name"),
 			expected: &domain.ResourcePage{
-				Total:     3,
+				Total:     4,
 				Limit:     10,
 				Offset:    0,
-				Resources: []*Resource{r1, r2, r3},
+				Resources: []*Resource{r1, r2, r3, r4},
 			},
 			considerOrder: true,
 		},
@@ -285,10 +292,10 @@ func TestFind(t *testing.T) {
 			name:    "FindingSortingByTextFieldNameDesc",
 			filters: createFilter("sort", "-name"),
 			expected: &domain.ResourcePage{
-				Total:     3,
+				Total:     4,
 				Limit:     10,
 				Offset:    0,
-				Resources: []*Resource{r3, r2, r1},
+				Resources: []*Resource{r3, r4, r2, r1},
 			},
 			considerOrder: true,
 		},
@@ -296,10 +303,10 @@ func TestFind(t *testing.T) {
 			name:    "FindingSortingByFieldRandomNumberAsc",
 			filters: createFilter("sort", "random_number"),
 			expected: &domain.ResourcePage{
-				Total:     3,
+				Total:     4,
 				Limit:     10,
 				Offset:    0,
-				Resources: []*Resource{r1, r2, r3},
+				Resources: []*Resource{r1, r4, r2, r3},
 			},
 			considerOrder: true,
 		},
@@ -307,10 +314,10 @@ func TestFind(t *testing.T) {
 			name:    "FindingSortingByNumFieldRandomNumberDesc",
 			filters: createFilter("sort", "-random_number"),
 			expected: &domain.ResourcePage{
-				Total:     3,
+				Total:     4,
 				Limit:     10,
 				Offset:    0,
-				Resources: []*Resource{r2, r3, r1},
+				Resources: []*Resource{r2, r3, r1, r4},
 			},
 			considerOrder: true,
 		},
@@ -335,10 +342,32 @@ func TestFind(t *testing.T) {
 				newFilter("offset", "2"),
 			),
 			expected: &domain.ResourcePage{
-				Total:     1,
+				Total:     2,
 				Limit:     10,
 				Offset:    2,
-				Resources: []*Resource{r1},
+				Resources: []*Resource{r1, r4},
+			},
+			considerOrder: true,
+		},
+		{
+			name:    "FindingSortingByNameAscAndRandomNumberAsc",
+			filters: createFilter("sort", "name", "random_number"),
+			expected: &domain.ResourcePage{
+				Total:     4,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r1, r2, r4, r3},
+			},
+			considerOrder: true,
+		},
+		{
+			name:    "FindingSortingByNameAscAndRandomNumberDesc",
+			filters: createFilter("sort", "name", "-random_number"),
+			expected: &domain.ResourcePage{
+				Total:     4,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r1, r2, r3, r4},
 			},
 			considerOrder: true,
 		},

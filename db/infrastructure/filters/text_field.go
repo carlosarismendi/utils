@@ -16,11 +16,11 @@ func TextField(field string) *TextFieldFilter {
 	}
 }
 
-func (f *TextFieldFilter) Apply(db *gorm.DB, value string) (*gorm.DB, error) {
-	err := domain.CheckEmptyValue(f.field, value)
+func (f *TextFieldFilter) Apply(db *gorm.DB, values []string) (*gorm.DB, error) {
+	err := domain.CheckEmptyValue(f.field, values[0])
 	if err != nil {
 		return nil, err
 	}
 
-	return db.Where(f.field, value), nil
+	return db.Where(f.field, values[0]), nil
 }

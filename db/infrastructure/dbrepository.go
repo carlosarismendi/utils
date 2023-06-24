@@ -161,7 +161,7 @@ func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) 
 		}
 
 		var err error
-		db, err = filter.Apply(db, values[0])
+		db, err = filter.Apply(db, values)
 		if err != nil {
 			return nil, err
 		}
