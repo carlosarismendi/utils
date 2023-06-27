@@ -89,5 +89,6 @@ func (r *HTTPRequester) withOptions(options ...Option) *HTTPRequester {
 
 func (r *HTTPRequester) clone() *HTTPRequester {
 	clone := *r
+	clone.headers = r.headers.Clone()
 	return &clone
 }

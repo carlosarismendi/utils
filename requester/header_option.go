@@ -19,3 +19,7 @@ func (o *HeaderOption) Apply(req *HTTPRequester) {
 func ContentType(value string) *HeaderOption {
 	return Header("Content-Type", value)
 }
+
+func Authorization(value string) *HeaderOption {
+	return Header("Authorization", value)
+}
