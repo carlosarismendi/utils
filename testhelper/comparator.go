@@ -16,7 +16,7 @@ import (
 // Unexported fields are ignored.
 // Uses methods from https://pkg.go.dev/github.com/stretchr/testify/require.
 func RequireEqual(t testing.TB, expected, actual interface{}, ignoreFields ...string) {
-	equal := compare(expected, actual, ignoreFields...)
+	equal := compare(expected, actual, "", ignoreFields...)
 	if !equal {
 		require.Fail(t, getErrorMessage(expected, actual))
 	}
@@ -27,13 +27,13 @@ func RequireEqual(t testing.TB, expected, actual interface{}, ignoreFields ...st
 // Unexported fields are ignored.
 // Uses methods from https://pkg.go.dev/github.com/stretchr/testify/assert.
 func AssertEqual(t testing.TB, expected, actual interface{}, ignoreFields ...string) {
-	equal := compare(expected, actual, ignoreFields...)
+	equal := compare(expected, actual, "", ignoreFields...)
 	if !equal {
 		assert.Fail(t, getErrorMessage(expected, actual))
 	}
 }
 
-func compare(expected, actual interface{}, ignoreFields ...string) bool {
+func compare(expected, actual interface{}, path string, ignoreFields ...string) bool {
 	exp, act, sameTypes := getValues(expected, actual)
 	if !sameTypes {
 		return false
@@ -51,21 +51,21 @@ func compare(expected, actual interface{}, ignoreFields ...string) bool {
 		return false
 	}
 
-	equal := compareValue(exp, act, ignoreFields...)
+	equal := compareValue(exp, act, path, ignoreFields...)
 
 	return equal
 }
 
-func compareValue(exp, act reflect.Value, ignoreFields ...string) bool {
+func compareValue(exp, act reflect.Value, path string, ignoreFields ...string) bool {
 	switch exp.Kind() {
 	case reflect.Struct:
-		return compareStructs(exp, act, ignoreFields...)
+		return compareStructs(exp, act, path, ignoreFields...)
 
 	case reflect.Map:
-		return compareMaps(exp, act, ignoreFields...)
+		return compareMaps(exp, act, path, ignoreFields...)
 
 	case reflect.Slice, reflect.Array:
-		return compareSlices(exp, act, ignoreFields...)
+		return compareSlices(exp, act, path, ignoreFields...)
 
 	default:
 		// Primitive types (int, uint, float, string, complex, bool) and
@@ -74,7 +74,7 @@ func compareValue(exp, act reflect.Value, ignoreFields ...string) bool {
 	}
 }
 
-func compareStructs(exp, act reflect.Value, ignoreFields ...string) bool {
+func compareStructs(exp, act reflect.Value, path string, ignoreFields ...string) bool {
 	typ := exp.Type()
 	if exp.Type() == reflect.TypeOf(time.Time{}) {
 		tExp := exp.Interface().(time.Time)
@@ -84,11 +84,15 @@ func compareStructs(exp, act reflect.Value, ignoreFields ...string) bool {
 
 	for i := 0; i < typ.NumField(); i++ {
 		field := typ.Field(i)
-		if !field.IsExported() || isIgnoreField(field.Name, ignoreFields) {
+		fieldPath := field.Name
+		if path != "" {
+			fieldPath = path + "." + field.Name
+		}
+		if !field.IsExported() || isIgnoreField(fieldPath, ignoreFields) {
 			continue
 		}
 
-		equal := compare(exp.Field(i).Interface(), act.Field(i).Interface(), ignoreFields...)
+		equal := compare(exp.Field(i).Interface(), act.Field(i).Interface(), fieldPath, ignoreFields...)
 		if !equal {
 			return false
 		}
@@ -97,7 +101,7 @@ func compareStructs(exp, act reflect.Value, ignoreFields ...string) bool {
 	return true
 }
 
-func compareMaps(exp, act reflect.Value, ignoreFields ...string) bool {
+func compareMaps(exp, act reflect.Value, path string, ignoreFields ...string) bool {
 	if exp.Len() != act.Len() {
 		return false
 	}
@@ -109,7 +113,7 @@ func compareMaps(exp, act reflect.Value, ignoreFields ...string) bool {
 			return false
 		}
 
-		equal := compare(exp.MapIndex(key).Interface(), actValue.Interface(), ignoreFields...)
+		equal := compare(exp.MapIndex(key).Interface(), actValue.Interface(), path, ignoreFields...)
 		if !equal {
 			return false
 		}
@@ -118,13 +122,13 @@ func compareMaps(exp, act reflect.Value, ignoreFields ...string) bool {
 	return true
 }
 
-func compareSlices(exp, act reflect.Value, ignoreFields ...string) bool {
+func compareSlices(exp, act reflect.Value, path string, ignoreFields ...string) bool {
 	if exp.Len() != act.Len() {
 		return false
 	}
 
 	for i := 0; i < exp.Len(); i++ {
-		equal := compare(exp.Index(i).Interface(), act.Index(i).Interface(), ignoreFields...)
+		equal := compare(exp.Index(i).Interface(), act.Index(i).Interface(), path, ignoreFields...)
 		if !equal {
 			return false
 		}

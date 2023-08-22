@@ -9,8 +9,8 @@ import (
 
 func TestCompare(t *testing.T) {
 	type NestedResource struct {
-		InnerID string
-		Number  int
+		ID     string
+		Number int
 	}
 
 	type Resource struct {
@@ -35,6 +35,7 @@ func TestCompare(t *testing.T) {
 		resource1    interface{}
 		resource2    interface{}
 		ignoreFields []string
+		equal        bool
 	}
 
 	tests := []compareTest{
@@ -44,19 +45,20 @@ func TestCompare(t *testing.T) {
 				ID:   "id",
 				Name: "name",
 				Nested: &NestedResource{
-					InnerID: "innerID",
-					Number:  25,
+					ID:     "innerID",
+					Number: 25,
 				},
 			},
 			resource2: &Resource{
 				ID:   "id",
 				Name: "name",
 				Nested: &NestedResource{
-					InnerID: "innerID",
-					Number:  25,
+					ID:     "innerID",
+					Number: 25,
 				},
 			},
 			ignoreFields: []string{},
+			equal:        true,
 		},
 
 		{
@@ -65,19 +67,20 @@ func TestCompare(t *testing.T) {
 				ID:   "id",
 				Name: "name",
 				Nested: &NestedResource{
-					InnerID: "innerID",
-					Number:  25,
+					ID:     "innerID",
+					Number: 25,
 				},
 			},
 			resource2: Resource{
 				ID:   "id",
 				Name: "name",
 				Nested: &NestedResource{
-					InnerID: "innerID",
-					Number:  25,
+					ID:     "innerID",
+					Number: 25,
 				},
 			},
 			ignoreFields: []string{},
+			equal:        true,
 		},
 
 		{
@@ -86,19 +89,20 @@ func TestCompare(t *testing.T) {
 				ID:   "id",
 				Name: "name",
 				Nested: &NestedResource{
-					InnerID: "innerID",
-					Number:  25,
+					ID:     "innerID",
+					Number: 25,
 				},
 			},
 			resource2: Resource{
 				ID:   "id",
 				Name: "name",
 				Nested: &NestedResource{
-					InnerID: "innerID",
-					Number:  25,
+					ID:     "innerID",
+					Number: 25,
 				},
 			},
 			ignoreFields: []string{},
+			equal:        true,
 		},
 
 		{
@@ -111,11 +115,12 @@ func TestCompare(t *testing.T) {
 				ID:   "id",
 				Name: "name",
 				Nested: &NestedResource{
-					InnerID: "innerID",
-					Number:  25,
+					ID:     "innerID",
+					Number: 25,
 				},
 			},
 			ignoreFields: []string{"Nested"},
+			equal:        true,
 		},
 
 		{
@@ -128,11 +133,12 @@ func TestCompare(t *testing.T) {
 				ID:   "id",
 				Name: "name",
 				NestedResource: &NestedResource{
-					InnerID: "innerID",
-					Number:  25,
+					ID:     "innerID",
+					Number: 25,
 				},
 			},
 			ignoreFields: []string{"NestedResource"},
+			equal:        true,
 		},
 
 		{
@@ -145,11 +151,12 @@ func TestCompare(t *testing.T) {
 				ID:   "id",
 				Name: "name",
 				NestedResource: &NestedResource{
-					InnerID: "innerID",
-					Number:  25,
+					ID:     "innerID",
+					Number: 25,
 				},
 			},
 			ignoreFields: []string{"NestedResource"},
+			equal:        true,
 		},
 
 		{
@@ -162,11 +169,12 @@ func TestCompare(t *testing.T) {
 				ID:   "id",
 				Name: "name",
 				NestedResource: &NestedResource{
-					InnerID: "innerID",
-					Number:  25,
+					ID:     "innerID",
+					Number: 25,
 				},
 			},
 			ignoreFields: []string{"NestedResource"},
+			equal:        true,
 		},
 
 		{
@@ -180,6 +188,7 @@ func TestCompare(t *testing.T) {
 				"field2": 3,
 			},
 			ignoreFields: []string{},
+			equal:        true,
 		},
 
 		{
@@ -197,6 +206,7 @@ func TestCompare(t *testing.T) {
 				},
 			},
 			ignoreFields: []string{"Name"},
+			equal:        true,
 		},
 
 		{
@@ -204,6 +214,7 @@ func TestCompare(t *testing.T) {
 			resource1:    []int{1, 2, 3},
 			resource2:    []int{1, 2, 3},
 			ignoreFields: []string{},
+			equal:        true,
 		},
 
 		{
@@ -229,6 +240,7 @@ func TestCompare(t *testing.T) {
 				},
 			},
 			ignoreFields: []string{},
+			equal:        true,
 		},
 
 		{
@@ -254,6 +266,7 @@ func TestCompare(t *testing.T) {
 				},
 			},
 			ignoreFields: []string{},
+			equal:        true,
 		},
 
 		{
@@ -279,6 +292,7 @@ func TestCompare(t *testing.T) {
 				},
 			},
 			ignoreFields: []string{"Name"},
+			equal:        true,
 		},
 
 		{
@@ -304,6 +318,7 @@ func TestCompare(t *testing.T) {
 				},
 			},
 			ignoreFields: []string{"Name"},
+			equal:        true,
 		},
 
 		{
@@ -326,7 +341,8 @@ func TestCompare(t *testing.T) {
 					},
 				},
 			},
-			ignoreFields: []string{"Name"},
+			ignoreFields: []string{"Arr.Name"},
+			equal:        true,
 		},
 
 		{
@@ -334,6 +350,7 @@ func TestCompare(t *testing.T) {
 			resource1:    time.Date(2022, 10, 5, 10, 49, 8, 1, time.UTC),
 			resource2:    time.Date(2022, 10, 5, 10, 49, 8, 1, time.UTC),
 			ignoreFields: []string{},
+			equal:        true,
 		},
 
 		{
@@ -341,13 +358,36 @@ func TestCompare(t *testing.T) {
 			resource1:    struct{ Timestamp time.Time }{Timestamp: time.Date(2022, 10, 5, 10, 49, 8, 1, time.UTC)},
 			resource2:    struct{ Timestamp time.Time }{Timestamp: time.Date(2022, 10, 5, 10, 49, 8, 1, time.UTC)},
 			ignoreFields: []string{},
+			equal:        true,
+		},
+
+		{
+			name: "CompareStructIgnoringInnerFieldOfSubStruct_returnEqual",
+			resource1: &Resource{
+				ID:   "id",
+				Name: "name",
+				Nested: &NestedResource{
+					ID:     "innerID_diff",
+					Number: 25,
+				},
+			},
+			resource2: &Resource{
+				ID:   "id",
+				Name: "name",
+				Nested: &NestedResource{
+					ID:     "innerID",
+					Number: 25,
+				},
+			},
+			ignoreFields: []string{"Nested.ID"},
+			equal:        true,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			equal := compare(test.resource1, test.resource2, test.ignoreFields...)
-			require.True(t, equal, getErrorMessage(test.resource1, test.resource2))
+			equal := compare(test.resource1, test.resource2, "", test.ignoreFields...)
+			require.Equal(t, test.equal, equal, getErrorMessage(test.resource1, test.resource2))
 		})
 	}
 }
