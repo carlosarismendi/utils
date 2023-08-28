@@ -30,7 +30,7 @@ dbConfig := NewDBConfigFromEnv()
 // Returns a *DBHolder initialized with the provided config.
 // In case the *DBConfig object has zero values, those will
 // be filled with default values.
-dbHolder := NewDHolder(dbConfig)
+dbHolder := NewDBHolder(dbConfig)
 // Run SQL migrations found in the folder specified by DBConfig.MigrationsDir
 dbHolder.RunMigrations()
 ```
