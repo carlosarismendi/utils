@@ -1,7 +1,9 @@
-package infrastructure
+package usql
 
 import (
 	"fmt"
+
+	"github.com/carlosarismendi/utils/db/infrastructure"
 )
 
 type TestDBHolder struct {
@@ -9,7 +11,7 @@ type TestDBHolder struct {
 }
 
 func NewTestDBHolder(schemaName string) *TestDBHolder {
-	cfg := NewDBConfigFromEnv()
+	cfg := infrastructure.NewDBConfigFromEnv()
 	cfg.SchemaName = schemaName
 	return &TestDBHolder{
 		DBHolder: NewDBHolder(cfg),
@@ -17,14 +19,12 @@ func NewTestDBHolder(schemaName string) *TestDBHolder {
 }
 
 func (d *TestDBHolder) Reset() {
-	db := d.db
-
-	err := db.Exec(fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE;", d.config.SchemaName)).Error
+	_, err := d.db.Exec(fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE;", d.config.SchemaName))
 	if err != nil {
 		panic(err)
 	}
 
-	d.createSchema()
-	d.setSearchPath()
+	d.config.CreateSchema(d.db.DB)
+	d.config.SetSearchPath(d.db.DB)
 	_ = d.RunMigrations()
 }

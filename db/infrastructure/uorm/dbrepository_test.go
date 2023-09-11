@@ -1,4 +1,4 @@
-package infrastructure
+package uorm
 
 import (
 	"context"
@@ -6,9 +6,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/carlosarismendi/utils/db/domain"
-	"github.com/carlosarismendi/utils/db/infrastructure/filters"
-	"github.com/carlosarismendi/utils/utilerror"
+	"github.com/carlosarismendi/utils/db/dbdomain"
+	uormFilters "github.com/carlosarismendi/utils/db/infrastructure/uorm/filters"
+	"github.com/carlosarismendi/utils/uerr"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,12 +25,11 @@ func createResourceTable(t testing.TB, r *DBrepository) {
 }
 
 func TestTransactions(t *testing.T) {
-	dbHolder := NewTestDBHolder("db_repository_test_transactions")
+	dbHolder := NewTestDBHolder("db_orm_repository_test_transactions")
 	r := NewDBRepository(dbHolder.DBHolder, nil)
 
 	t.Run("savingResourceWithoutError_commitsTransaction", func(t *testing.T) {
 		// ARRANGE
-
 		dbHolder.Reset()
 		createResourceTable(t, r)
 
@@ -41,11 +40,11 @@ func TestTransactions(t *testing.T) {
 		}
 
 		err := func() (rErr error) {
-			ctx, err := domain.BeginTx(context.Background(), r)
+			ctx, err := dbdomain.BeginTx(context.Background(), r)
 			if err != nil {
 				return err
 			}
-			defer domain.EndTx(ctx, r, &rErr)
+			defer dbdomain.EndTx(ctx, r, &rErr)
 
 			// ACT
 			return r.Save(ctx, &resource)
@@ -60,7 +59,6 @@ func TestTransactions(t *testing.T) {
 
 	t.Run("savingAResourceWithError_rollbacksTransaction", func(t *testing.T) {
 		// ARRANGE
-
 		dbHolder.Reset()
 		createResourceTable(t, r)
 
@@ -71,11 +69,11 @@ func TestTransactions(t *testing.T) {
 		}
 
 		err := func() (rErr error) {
-			ctx, err := domain.BeginTx(context.Background(), r)
+			ctx, err := dbdomain.BeginTx(context.Background(), r)
 			if err != nil {
 				return err
 			}
-			defer domain.EndTx(ctx, r, &rErr)
+			defer dbdomain.EndTx(ctx, r, &rErr)
 
 			// ACT
 			err = r.Save(ctx, &validResource)
@@ -91,7 +89,7 @@ func TestTransactions(t *testing.T) {
 		var actual Resource
 		err = r.FindByID(context.Background(), validResource.ID, &actual)
 		require.Error(t, err)
-		require.Equal(t, utilerror.ResourceNotFoundError, utilerror.GetKey(err), err)
+		require.Equal(t, uerr.ResourceNotFoundError, uerr.GetKey(err), err)
 	})
 
 	t.Run("savingAResourceWithPanic_rollbacksTransactionAndReemitsPanic", func(t *testing.T) {
@@ -114,15 +112,15 @@ func TestTransactions(t *testing.T) {
 			var actual Resource
 			err := r.FindByID(context.Background(), resource.ID, &actual)
 			require.Error(t, err)
-			require.Equal(t, utilerror.ResourceNotFoundError, utilerror.GetKey(err), err)
+			require.Equal(t, uerr.ResourceNotFoundError, uerr.GetKey(err), err)
 		}()
 
 		err := func() (rErr error) {
-			ctx, err := domain.BeginTx(context.Background(), r)
+			ctx, err := dbdomain.BeginTx(context.Background(), r)
 			if err != nil {
 				return err
 			}
-			defer domain.EndTx(ctx, r, &rErr)
+			defer dbdomain.EndTx(ctx, r, &rErr)
 
 			// ACT
 			err = r.Save(ctx, &resource)
@@ -137,7 +135,7 @@ func TestTransactions(t *testing.T) {
 }
 
 func TestSave(t *testing.T) {
-	dbHolder := NewTestDBHolder("db_repository_test_save")
+	dbHolder := NewTestDBHolder("db_orm_repository_test_save")
 	r := NewDBRepository(dbHolder.DBHolder, nil)
 
 	t.Run("SavingValidResource", func(t *testing.T) {
@@ -181,62 +179,27 @@ func TestSave(t *testing.T) {
 	})
 }
 
-func TestFind(t *testing.T) {
-	dbHolder := NewTestDBHolder("db_repository_test_find")
+func TestFindWithFilters(t *testing.T) {
+	dbHolder := NewTestDBHolder("db_orm_repository_test_find")
 	dbHolder.Reset()
 
-	filtersMap := map[string]filters.Filter{
-		"id":            filters.TextField("id"),
-		"name":          filters.TextField("name"),
-		"random_number": filters.NumField("random_number"),
-		"sort":          filters.Sorter("name", "random_number"),
+	filtersMap := map[string]uormFilters.Filter{
+		"id":            uormFilters.TextField("id"),
+		"name":          uormFilters.TextField("name"),
+		"random_number": uormFilters.NumField("random_number"),
+		"sort":          uormFilters.Sorter("name", "random_number"),
 	}
 
 	r := NewDBRepository(dbHolder.DBHolder, filtersMap)
 	createResourceTable(t, r)
 
-	ctx := context.Background()
-
-	r1 := &Resource{
-		ID:           "5ceff18d-9039-44b5-a5d3-3d99653f4601",
-		Name:         "Resource1",
-		RandomNumber: 1,
-	}
-	require.NoError(t, r.Save(ctx, r1))
-
-	r2 := &Resource{
-		ID:           "5ceff18d-9039-44b5-a5d3-3d99653f4602",
-		Name:         "Resource2",
-		RandomNumber: 2,
-	}
-	require.NoError(t, r.Save(ctx, r2))
-
-	r3 := &Resource{
-		ID:           "5ceff18d-9039-44b5-a5d3-3d99653f4603",
-		Name:         "Resource3",
-		RandomNumber: 2,
-	}
-	require.NoError(t, r.Save(ctx, r3))
-
-	r4 := &Resource{
-		ID:           "5ceff18d-9039-44b5-a5d3-3d99653f4604",
-		Name:         "Resource3",
-		RandomNumber: 1,
-	}
-	require.NoError(t, r.Save(ctx, r4))
-
-	type findTest struct {
-		name          string
-		filters       url.Values
-		expected      *domain.ResourcePage
-		considerOrder bool
-	}
+	r1, r2, r3, r4 := populateDB(context.Background(), t, r)
 
 	tests := []findTest{
 		{
 			name:    "FindingWithoutFilters",
 			filters: url.Values{},
-			expected: &domain.ResourcePage{
+			expected: &dbdomain.ResourcePage{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -247,7 +210,7 @@ func TestFind(t *testing.T) {
 		{
 			name:    "FindingFilteringByTextFieldName",
 			filters: createFilter("name", "Resource1"),
-			expected: &domain.ResourcePage{
+			expected: &dbdomain.ResourcePage{
 				Total:     1,
 				Limit:     10,
 				Offset:    0,
@@ -258,7 +221,7 @@ func TestFind(t *testing.T) {
 		{
 			name:    "FindingFilteringByTextFieldID",
 			filters: createFilter("id", "5ceff18d-9039-44b5-a5d3-3d99653f4603"),
-			expected: &domain.ResourcePage{
+			expected: &dbdomain.ResourcePage{
 				Total:     1,
 				Limit:     10,
 				Offset:    0,
@@ -267,20 +230,66 @@ func TestFind(t *testing.T) {
 			considerOrder: true,
 		},
 		{
-			name:    "FindingFilteringByNumberFieldRandomNumber",
-			filters: createFilter("random_number", "2"),
-			expected: &domain.ResourcePage{
+			name:    "FindingFilteringByMultipleValuesInNumberField",
+			filters: createFilter("name", "Resource1", "Resource2"),
+			expected: &dbdomain.ResourcePage{
 				Total:     2,
 				Limit:     10,
 				Offset:    0,
-				Resources: []*Resource{r2, r3},
+				Resources: []*Resource{r1, r2},
 			},
 			considerOrder: false,
 		},
 		{
+			name:    "FindingFilteringByMultipleValuesInNumberField",
+			filters: createFilter("random_number", "2", "0"),
+			expected: &dbdomain.ResourcePage{
+				Total:     3,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r2, r3, r4},
+			},
+			considerOrder: false,
+		},
+		{
+			name:    "FindingFilteringBothByNumberAndTextField",
+			filters: createFilters(newFilter("random_number", "2"), newFilter("name", "Resource3")),
+			expected: &dbdomain.ResourcePage{
+				Total:     1,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r3},
+			},
+			considerOrder: false,
+		},
+	}
+
+	for _, ft := range tests {
+		t.Run(ft.name, ft.testRun(r))
+	}
+}
+
+func TestFindWithSorters(t *testing.T) {
+	dbHolder := NewTestDBHolder("db_orm_repository_test_find")
+	dbHolder.Reset()
+
+	filtersMap := map[string]uormFilters.Filter{
+		"id":            uormFilters.TextField("id"),
+		"name":          uormFilters.TextField("name"),
+		"random_number": uormFilters.NumField("random_number"),
+		"sort":          uormFilters.Sorter("name", "random_number"),
+	}
+
+	r := NewDBRepository(dbHolder.DBHolder, filtersMap)
+	createResourceTable(t, r)
+
+	r1, r2, r3, r4 := populateDB(context.Background(), t, r)
+
+	tests := []findTest{
+		{
 			name:    "FindingSortingByTextFieldNameAsc",
 			filters: createFilter("sort", "name"),
-			expected: &domain.ResourcePage{
+			expected: &dbdomain.ResourcePage{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -291,7 +300,7 @@ func TestFind(t *testing.T) {
 		{
 			name:    "FindingSortingByTextFieldNameDesc",
 			filters: createFilter("sort", "-name"),
-			expected: &domain.ResourcePage{
+			expected: &dbdomain.ResourcePage{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -302,18 +311,18 @@ func TestFind(t *testing.T) {
 		{
 			name:    "FindingSortingByFieldRandomNumberAsc",
 			filters: createFilter("sort", "random_number"),
-			expected: &domain.ResourcePage{
+			expected: &dbdomain.ResourcePage{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
-				Resources: []*Resource{r1, r4, r2, r3},
+				Resources: []*Resource{r4, r1, r2, r3},
 			},
 			considerOrder: true,
 		},
 		{
 			name:    "FindingSortingByNumFieldRandomNumberDesc",
 			filters: createFilter("sort", "-random_number"),
-			expected: &domain.ResourcePage{
+			expected: &dbdomain.ResourcePage{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -327,7 +336,7 @@ func TestFind(t *testing.T) {
 				newFilter("sort", "-random_number"),
 				newFilter("limit", "2"),
 			),
-			expected: &domain.ResourcePage{
+			expected: &dbdomain.ResourcePage{
 				Total:     2,
 				Limit:     2,
 				Offset:    0,
@@ -341,7 +350,7 @@ func TestFind(t *testing.T) {
 				newFilter("sort", "-random_number"),
 				newFilter("offset", "2"),
 			),
-			expected: &domain.ResourcePage{
+			expected: &dbdomain.ResourcePage{
 				Total:     2,
 				Limit:     10,
 				Offset:    2,
@@ -352,7 +361,7 @@ func TestFind(t *testing.T) {
 		{
 			name:    "FindingSortingByNameAscAndRandomNumberAsc",
 			filters: createFilter("sort", "name", "random_number"),
-			expected: &domain.ResourcePage{
+			expected: &dbdomain.ResourcePage{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -363,7 +372,7 @@ func TestFind(t *testing.T) {
 		{
 			name:    "FindingSortingByNameAscAndRandomNumberDesc",
 			filters: createFilter("sort", "name", "-random_number"),
-			expected: &domain.ResourcePage{
+			expected: &dbdomain.ResourcePage{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -374,32 +383,39 @@ func TestFind(t *testing.T) {
 	}
 
 	for _, ft := range tests {
-		t.Run(ft.name, func(t *testing.T) {
-			// ARRANGE
-			expectedResources := ft.expected.Resources.([]*Resource)
-			require.EqualValues(t, len(expectedResources), ft.expected.Total, "Expected Total and Resources doesn't match.")
-
-			// ACT
-			var resources []*Resource
-			rp, err := r.Find(context.Background(), ft.filters, &resources)
-
-			// ASSERT
-			require.NoError(t, err)
-			require.EqualValues(t, ft.expected.Total, len(resources))
-			require.EqualValues(t, ft.expected.Total, rp.Total)
-			require.EqualValues(t, ft.expected.Total, len(*rp.Resources.(*[]*Resource)))
-			require.EqualValues(t, ft.expected.Offset, rp.Offset)
-			require.EqualValues(t, ft.expected.Limit, rp.Limit)
-
-			if ft.considerOrder {
-				require.Equal(t, expectedResources, resources)
-			} else {
-				for _, expRes := range expectedResources {
-					require.Contains(t, resources, expRes)
-				}
-			}
-		})
+		t.Run(ft.name, ft.testRun(r))
 	}
+}
+
+func populateDB(ctx context.Context, t testing.TB, r *DBrepository) (r1, r2, r3, r4 *Resource) {
+	r1 = &Resource{
+		ID:           "5ceff18d-9039-44b5-a5d3-3d99653f4601",
+		Name:         "Resource1",
+		RandomNumber: 1,
+	}
+	require.NoError(t, r.Save(ctx, r1))
+
+	r2 = &Resource{
+		ID:           "5ceff18d-9039-44b5-a5d3-3d99653f4602",
+		Name:         "Resource2",
+		RandomNumber: 2,
+	}
+	require.NoError(t, r.Save(ctx, r2))
+
+	r3 = &Resource{
+		ID:           "5ceff18d-9039-44b5-a5d3-3d99653f4603",
+		Name:         "Resource3",
+		RandomNumber: 2,
+	}
+	require.NoError(t, r.Save(ctx, r3))
+
+	r4 = &Resource{
+		ID:           "5ceff18d-9039-44b5-a5d3-3d99653f4604",
+		Name:         "Resource3",
+		RandomNumber: 0,
+	}
+	require.NoError(t, r.Save(ctx, r4))
+	return r1, r2, r3, r4
 }
 
 type filter struct {
@@ -430,4 +446,39 @@ func createFilter(key string, values ...string) url.Values {
 		v.Add(key, value)
 	}
 	return v
+}
+
+type findTest struct {
+	name          string
+	filters       url.Values
+	expected      *dbdomain.ResourcePage
+	considerOrder bool
+}
+
+func (ft *findTest) testRun(r *DBrepository) func(*testing.T) {
+	return func(t *testing.T) {
+		// ARRANGE
+		expectedResources := ft.expected.Resources.([]*Resource)
+		require.EqualValues(t, len(expectedResources), ft.expected.Total, "Expected Total and Resources doesn't match.")
+
+		// ACT
+		var resources []*Resource
+		rp, err := r.Find(context.Background(), ft.filters, &resources)
+
+		// ASSERT
+		require.NoError(t, err)
+		require.EqualValues(t, ft.expected.Total, len(resources))
+		require.EqualValues(t, ft.expected.Total, rp.Total)
+		require.EqualValues(t, ft.expected.Total, len(*rp.Resources.(*[]*Resource)))
+		require.EqualValues(t, ft.expected.Offset, rp.Offset)
+		require.EqualValues(t, ft.expected.Limit, rp.Limit)
+
+		if ft.considerOrder {
+			require.Equal(t, expectedResources, resources)
+		} else {
+			for _, expRes := range expectedResources {
+				require.Contains(t, resources, expRes)
+			}
+		}
+	}
 }

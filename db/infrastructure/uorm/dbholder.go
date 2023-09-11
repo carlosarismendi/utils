@@ -1,11 +1,9 @@
-package infrastructure
+package uorm
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/golang-migrate/migrate/v4"
-	migratePostgres "github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/carlosarismendi/utils/db/infrastructure"
 
 	// nolint:blank-imports // it is necessary to run the SQL migrations.
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -16,17 +14,17 @@ import (
 )
 
 type DBHolder struct {
-	config *DBConfig
+	config *infrastructure.DBConfig
 	db     *gorm.DB
 }
 
 // Returns a *DBHolder initialized with the provided config.
 // In case the *DBConfig object has zero values, those will
 // be filled with default values.
-func NewDBHolder(config *DBConfig) *DBHolder {
-	config.checkValuesProvidedAndSetDefaults()
+func NewDBHolder(config *infrastructure.DBConfig) *DBHolder {
+	config.SetEmptyValuesToDefaults()
 
-	conn := config.getConnectionString()
+	conn := config.GetConnectionString()
 	pg := postgres.Open(conn)
 	db, err := gorm.Open(pg, &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
@@ -40,39 +38,23 @@ func NewDBHolder(config *DBConfig) *DBHolder {
 		db:     db,
 	}
 
-	dbHolder.createSchema()
-	dbHolder.setSearchPath()
+	sdb, err := db.DB()
+	if err != nil {
+		panic(err)
+	}
+	config.CreateSchema(sdb)
+	config.SetSearchPath(sdb)
 
 	return dbHolder
 }
 
 // RunMigrations runs SQL migrations found in the folder specified by DBConfig.MigrationsDir
 func (d *DBHolder) RunMigrations() error {
-	db, err := d.db.DB()
+	sdb, err := d.db.DB()
 	if err != nil {
-		return err
+		panic(err)
 	}
-
-	config := migratePostgres.Config{
-		SchemaName: d.config.SchemaName,
-	}
-	driver, err := migratePostgres.WithInstance(db, &config)
-	if err != nil {
-		return err
-	}
-	m, err := migrate.NewWithDatabaseInstance(
-		fmt.Sprintf("file://%s", d.config.MigrationsDir),
-		"postgres", driver)
-	if err != nil {
-		return err
-	}
-
-	err = m.Up()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return infrastructure.RunMigrations(sdb, d.config)
 }
 
 // GetDBInstance returns the inner database object *gorm.DB provided by GORM.
@@ -83,18 +65,4 @@ func (d *DBHolder) GetDBInstance(ctx context.Context) *gorm.DB {
 		txFromCtx = d.db.WithContext(ctx)
 	}
 	return txFromCtx.(*gorm.DB)
-}
-
-func (d *DBHolder) createSchema() {
-	err := d.db.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", d.config.SchemaName)).Error
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (d *DBHolder) setSearchPath() {
-	d.db = d.db.Exec(fmt.Sprintf("SET search_path TO %s;", d.config.SchemaName))
-	if d.db.Error != nil {
-		panic(d.db.Error)
-	}
 }

@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	"database/sql"
 	"fmt"
 
 	"github.com/caarlos0/env"
@@ -29,7 +30,7 @@ func NewDBConfigFromEnv() *DBConfig {
 	return &cfg
 }
 
-func (c *DBConfig) checkValuesProvidedAndSetDefaults() {
+func (c *DBConfig) SetEmptyValuesToDefaults() {
 	if c.Host == "" {
 		c.Host = "localhost"
 	}
@@ -59,7 +60,7 @@ func (c *DBConfig) checkValuesProvidedAndSetDefaults() {
 	}
 }
 
-func (c *DBConfig) getConnectionString() string {
+func (c *DBConfig) GetConnectionString() string {
 	host := fmt.Sprintf("host=%s", c.Host)
 	port := fmt.Sprintf("port=%s", c.Port)
 	user := fmt.Sprintf("user=%s", c.User)
@@ -69,4 +70,18 @@ func (c *DBConfig) getConnectionString() string {
 
 	conn := fmt.Sprintf("%s %s %s %s %s %s sslmode=disable TimeZone=UTC", host, port, user, pass, dbname, searchPath)
 	return conn
+}
+
+func (c *DBConfig) CreateSchema(db *sql.DB) {
+	_, err := db.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", c.SchemaName))
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (c *DBConfig) SetSearchPath(db *sql.DB) {
+	_, err := db.Exec(fmt.Sprintf("SET search_path TO %s;", c.SchemaName))
+	if err != nil {
+		panic(err)
+	}
 }

@@ -14,5 +14,6 @@ This project is a set of functionalities such as:
 
 ## Usage
 
-- [Database](./db/README.md).
+- [Database orm](./db/infrastructure/uorm/README.md).
+- [Database sql](./db/infrastructure/usql/README.md).
 - [HTTP requester](./requester/README.md).

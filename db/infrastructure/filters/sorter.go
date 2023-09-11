@@ -2,54 +2,45 @@ package filters
 
 import (
 	"fmt"
+	"strings"
 
-	"github.com/carlosarismendi/utils/db/domain"
-	"github.com/carlosarismendi/utils/utilerror"
-	"gorm.io/gorm"
+	"github.com/carlosarismendi/utils/uerr"
 )
 
-type SortFilter struct {
-	field string
-
-	allowedFields map[string]bool
-}
-
-func Sorter(fields ...string) *SortFilter {
-	allowedFields := make(map[string]bool)
-	for _, f := range fields {
-		allowedFields[f] = true
-	}
-	return &SortFilter{
-		allowedFields: allowedFields,
-	}
-}
-
-func (f *SortFilter) Apply(db *gorm.DB, values []string) (*gorm.DB, error) {
-	newDB := db
+func ApplySorter(allowedFields map[string]bool, values []string) (queryResult string, rErr error) {
+	sep := byte(' ')
+	var sb strings.Builder
+	var column, direction string
 	for _, v := range values {
-		filteredValue := domain.RemoveSpecialCharacters(v)
-		err := domain.CheckEmptyValue(f.field, filteredValue)
-		if err != nil {
-			return nil, err
+		column, direction, rErr = SortFieldAndDirection(allowedFields, v)
+		if rErr != nil {
+			return "", rErr
 		}
+		sb.Grow(2 + len(column) + len(direction))
+		sb.WriteByte(sep)
+		sb.WriteString(column)
+		sb.WriteByte(' ')
 
-		var field string
-		var direction string
-		if filteredValue[0] == '-' {
-			field = filteredValue[1:]
-			direction = "desc"
-		} else {
-			field = filteredValue
-			direction = "asc"
+		if len(direction) > 0 {
+			sb.WriteString(direction)
 		}
-
-		if _, ok := f.allowedFields[field]; !ok {
-			return nil, utilerror.NewError(utilerror.WrongInputParameterError, fmt.Sprintf("Invalid sort field %q.", field))
-		}
-
-		sort := fmt.Sprintf("%s %s", field, direction)
-		newDB = newDB.Order(sort)
+		sep = ','
 	}
 
-	return newDB, nil
+	return sb.String(), nil
+}
+
+func SortFieldAndDirection(allowedFields map[string]bool, value string) (col, dir string, err error) {
+	if value[0] == '-' {
+		col = value[1:]
+		dir = "DESC"
+	} else {
+		col = value
+	}
+
+	if !allowedFields[col] {
+		return "", "", uerr.NewError(uerr.WrongInputParameterError, fmt.Sprintf("Invalid sort field %q.", col))
+	}
+
+	return col, dir, nil
 }

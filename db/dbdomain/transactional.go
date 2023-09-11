@@ -1,11 +1,11 @@
-package domain
+package dbdomain
 
 import "context"
 
 type Transactional interface {
 	Begin(ctx context.Context) (context.Context, error)
 	Commit(ctx context.Context) error
-	Rollback(ctx context.Context) error
+	Rollback(ctx context.Context)
 }
 
 func BeginTx(ctx context.Context, r Transactional) (context.Context, error) {
@@ -17,14 +17,17 @@ func BeginTx(ctx context.Context, r Transactional) (context.Context, error) {
 func EndTx(ctx context.Context, r Transactional, rErr *error) {
 	pErr := recover()
 	if pErr != nil {
-		_ = r.Rollback(ctx)
+		r.Rollback(ctx)
 		panic(pErr)
 	}
 
 	if rErr != nil && *rErr != nil {
-		_ = r.Rollback(ctx)
+		r.Rollback(ctx)
 		return
 	}
 
-	_ = r.Commit(ctx)
+	err := r.Commit(ctx)
+	if err != nil {
+		r.Rollback(ctx)
+	}
 }

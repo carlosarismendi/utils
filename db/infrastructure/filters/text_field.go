@@ -1,26 +1,36 @@
 package filters
 
-import (
-	"github.com/carlosarismendi/utils/db/domain"
-	"gorm.io/gorm"
-)
+import "strings"
 
-type TextFieldFilter struct {
-	field string
-}
-
-func TextField(field string) *TextFieldFilter {
-	filtered := domain.RemoveSpecialCharacters(field)
-	return &TextFieldFilter{
-		field: filtered + " = ?",
-	}
-}
-
-func (f *TextFieldFilter) Apply(db *gorm.DB, values []string) (*gorm.DB, error) {
-	err := domain.CheckEmptyValue(f.field, values[0])
-	if err != nil {
-		return nil, err
+func ApplyTextField(fieldName string, values []string) (conds string, args []interface{}, rErr error) {
+	amountValues := len(values)
+	if amountValues == 0 {
+		return "", args, rErr
 	}
 
-	return db.Where(f.field, values[0]), nil
+	args = make([]interface{}, 0, amountValues)
+	var sb strings.Builder
+	if amountValues == 1 {
+		args = append(args, values[0])
+
+		sb.Grow(len(fieldName) + 4)
+		sb.WriteByte('(')
+		sb.WriteString(fieldName)
+		sb.WriteString("=?")
+		sb.WriteByte(')')
+	} else {
+		sb.Grow(len(fieldName) + 6 + 2*amountValues)
+		sb.WriteString(fieldName)
+		sb.WriteString(" IN (")
+		sep := byte(' ')
+		for _, v := range values {
+			args = append(args, v)
+			sb.WriteByte(sep)
+			sb.WriteByte('?')
+			sep = ','
+		}
+		sb.WriteByte(')')
+	}
+
+	return sb.String(), args, nil
 }

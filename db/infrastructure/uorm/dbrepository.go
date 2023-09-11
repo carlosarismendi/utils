@@ -1,4 +1,4 @@
-package infrastructure
+package uorm
 
 import (
 	"context"
@@ -6,13 +6,12 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/carlosarismendi/utils/db/domain"
+	"github.com/carlosarismendi/utils/db/dbdomain"
 	"github.com/carlosarismendi/utils/db/infrastructure/filters"
-	"github.com/carlosarismendi/utils/utilerror"
+	uormFilters "github.com/carlosarismendi/utils/db/infrastructure/uorm/filters"
+	"github.com/carlosarismendi/utils/uerr"
 	"gorm.io/gorm"
 )
-
-const defaultLimitValue = "10"
 
 type ctxk string
 
@@ -22,14 +21,14 @@ const transactionName string = "dbtx"
 // well as methods like Save or Find.
 type DBrepository struct {
 	db      *DBHolder
-	filters map[string]filters.Filter
+	filters map[string]uormFilters.Filter
 }
 
 // NewDBRepository returns a DBrepository.
 // requires a that map will be used in the method Find(context.Context, url.values) to use the filters
 // and sorters provided in the url.values{} parameter. In case the url.values contains a filter
 // that it is not in the filters map, it will return an error.
-func NewDBRepository(dbHolder *DBHolder, filtersMap map[string]filters.Filter) *DBrepository {
+func NewDBRepository(dbHolder *DBHolder, filtersMap map[string]uormFilters.Filter) *DBrepository {
 	return &DBrepository{
 		db:      dbHolder,
 		filters: filtersMap,
@@ -47,7 +46,7 @@ func (r *DBrepository) Begin(ctx context.Context) (context.Context, error) {
 	tx := r.db.db.WithContext(ctx).Begin()
 
 	if tx.Error != nil {
-		tErr := utilerror.NewError(utilerror.GenericError, "Error beginning transaction.").WithCause(tx.Error)
+		tErr := uerr.NewError(uerr.GenericError, "Error beginning transaction.").WithCause(tx.Error)
 		return nil, tErr
 	}
 
@@ -59,7 +58,7 @@ func (r *DBrepository) Begin(ctx context.Context) (context.Context, error) {
 func (r *DBrepository) Commit(ctx context.Context) error {
 	txFromCtx := ctx.Value(ctxk(transactionName))
 	if txFromCtx == nil {
-		tErr := utilerror.NewError(utilerror.GenericError, "Missing transaction when doing Commit.")
+		tErr := uerr.NewError(uerr.GenericError, "Missing transaction when doing Commit.")
 		return tErr
 	}
 	tx := txFromCtx.(*gorm.DB)
@@ -67,14 +66,13 @@ func (r *DBrepository) Commit(ctx context.Context) error {
 }
 
 // Rollback cancels the current transaction.
-func (r *DBrepository) Rollback(ctx context.Context) error {
+func (r *DBrepository) Rollback(ctx context.Context) {
 	txFromCtx := ctx.Value(ctxk(transactionName))
 	if txFromCtx == nil {
-		tErr := utilerror.NewError(utilerror.GenericError, "Missing transaction when doing Rollback.")
-		return tErr
+		return
 	}
 	tx := txFromCtx.(*gorm.DB)
-	return tx.Rollback().Error
+	_ = tx.Rollback().Error
 }
 
 // Save is a combination function. If save value does not contain primary key,
@@ -99,9 +97,9 @@ func (r *DBrepository) FindByID(ctx context.Context, id string, dest interface{}
 	var tErr error
 	if err != nil {
 		if r.IsResourceNotFound(err) {
-			tErr = utilerror.NewError(utilerror.ResourceNotFoundError, "Resource not found.")
+			tErr = uerr.NewError(uerr.ResourceNotFoundError, "Resource not found.")
 		} else {
-			tErr = utilerror.NewError(utilerror.GenericError, "Error finding resource by id.").WithCause(err)
+			tErr = uerr.NewError(uerr.GenericError, "Error finding resource by id.").WithCause(err)
 		}
 	}
 
@@ -137,14 +135,14 @@ func (r *DBrepository) FindByID(ctx context.Context, id string, dest interface{}
 //	v.Add("field", "value to use to filter")
 //	v.Add("sort", "field")  // sort in ascending order
 //	v.Add("sort", "-field") // sort in descending order
-func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) (*domain.ResourcePage, error) {
+func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) (*dbdomain.ResourcePage, error) {
 	db := r.GetDBInstance(ctx)
-	db, limit, err := r.applyLimit(db, &v)
+	db, limit, err := r.applyLimit(db, v)
 	if err != nil {
 		return nil, err
 	}
 
-	db, offset, err := r.applyOffset(db, &v)
+	db, offset, err := r.applyOffset(db, v)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +154,7 @@ func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) 
 
 		filter, ok := r.filters[key]
 		if !ok {
-			rErr := utilerror.NewError(utilerror.WrongInputParameterError, fmt.Sprintf("Invalid filter %q.", key))
+			rErr := uerr.NewError(uerr.WrongInputParameterError, fmt.Sprintf("Invalid filter %q.", key))
 			return nil, rErr
 		}
 
@@ -169,11 +167,11 @@ func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) 
 
 	result := db.Find(dst)
 	if result.Error != nil {
-		rErr := utilerror.NewError(utilerror.GenericError, "Error finding resources.").WithCause(result.Error)
+		rErr := uerr.NewError(uerr.GenericError, "Error finding resources.").WithCause(result.Error)
 		return nil, rErr
 	}
 
-	rp := &domain.ResourcePage{
+	rp := &dbdomain.ResourcePage{
 		Total:     result.RowsAffected,
 		Limit:     limit,
 		Offset:    offset,
@@ -197,27 +195,27 @@ func (r *DBrepository) HandleSaveOrUpdateError(err error) error {
 	}
 
 	if errors.Is(err, gorm.ErrDuplicatedKey) {
-		return utilerror.NewError(utilerror.ResourceAlreadyExistsError, "Resource already exists.").WithCause(err)
+		return uerr.NewError(uerr.ResourceAlreadyExistsError, "Resource already exists.").WithCause(err)
 	}
 
-	return utilerror.NewError(utilerror.GenericError, "Error saving or updating resource.").WithCause(err)
+	return uerr.NewError(uerr.GenericError, "Error saving or updating resource.").WithCause(err)
 }
 
-func (r *DBrepository) applyLimit(db *gorm.DB, v *url.Values) (*gorm.DB, int64, error) {
-	values, ok := (*v)["limit"]
+func (r *DBrepository) applyLimit(db *gorm.DB, v url.Values) (*gorm.DB, int64, error) {
+	values, ok := v["limit"]
 	var limit string
 	if ok {
 		limit = values[0]
+		v.Del("limit")
 	} else {
-		limit = defaultLimitValue
+		return db.Limit(filters.DefaultLimit), filters.DefaultLimit, nil
 	}
 
-	v.Del("limit")
 	return applyLimit(db, limit)
 }
 
-func (r *DBrepository) applyOffset(db *gorm.DB, v *url.Values) (*gorm.DB, int64, error) {
-	values, ok := (*v)["offset"]
+func (r *DBrepository) applyOffset(db *gorm.DB, v url.Values) (*gorm.DB, int64, error) {
+	values, ok := v["offset"]
 	if !ok {
 		return db, 0, nil
 	}

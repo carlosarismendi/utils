@@ -1,25 +1,25 @@
-package utilerror
+package uerr
 
 import (
 	"encoding/json"
 	"net/http"
 )
 
-type UtilError struct {
+type UError struct {
 	key     string
 	message string
 	cause   string
 }
 
-func NewError(key, message string) *UtilError {
-	return &UtilError{
+func NewError(key, message string) *UError {
+	return &UError{
 		key:     key,
 		message: message,
 		cause:   "",
 	}
 }
 
-func (c *UtilError) MarshalJSON() ([]byte, error) {
+func (c *UError) MarshalJSON() ([]byte, error) {
 	type err struct {
 		Key     string `json:"key"`
 		Message string `json:"message"`
@@ -37,22 +37,22 @@ func (c *UtilError) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m)
 }
 
-func (c *UtilError) String() string {
+func (c *UError) String() string {
 	b, _ := json.Marshal(c)
 	return string(b)
 }
 
-func (c *UtilError) Error() string {
+func (c *UError) Error() string {
 	return c.String()
 }
 
-func (c *UtilError) WithCause(err error) *UtilError {
+func (c *UError) WithCause(err error) *UError {
 	c.cause = err.Error()
 	return c
 }
 
 func GetKey(err error) string {
-	if uErr, ok := err.(*UtilError); ok {
+	if uErr, ok := err.(*UError); ok {
 		return uErr.key
 	}
 
@@ -60,7 +60,7 @@ func GetKey(err error) string {
 }
 
 func GetMessage(err error) string {
-	if uErr, ok := err.(*UtilError); ok {
+	if uErr, ok := err.(*UError); ok {
 		return uErr.message
 	}
 

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 
-	"github.com/carlosarismendi/utils/utilerror"
+	"github.com/carlosarismendi/utils/uerr"
 )
 
 type BodyOption struct {
@@ -25,7 +25,7 @@ func (o *BodyOption) Apply(req *HTTPRequester) {
 	var buf bytes.Buffer
 	err := json.NewEncoder(&buf).Encode(o.body)
 	if err != nil {
-		pErr := utilerror.NewError(utilerror.GenericError,
+		pErr := uerr.NewError(uerr.GenericError,
 			"Error marshaling body to JSON in http request").WithCause(err)
 		panic(pErr)
 	}

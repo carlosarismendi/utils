@@ -1,4 +1,4 @@
-package utilerror
+package uerr
 
 const (
 	GenericError               = "Error"
