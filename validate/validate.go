@@ -2,9 +2,9 @@ package validate
 
 import (
 	"fmt"
-	"net/http"
+	"strings"
 
-	"github.com/ansel1/merry"
+	"github.com/carlosarismendi/utils/uerr"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -13,25 +13,30 @@ var validate *validator.Validate = validator.New()
 
 func Validate(v interface{}) error {
 	err := validate.Struct(v)
-	if err != nil {
-		var mErr merry.Error
-		for _, err := range err.(validator.ValidationErrors) {
-			tag := err.ActualTag()
-			if err.Param() != "" {
-				tag = fmt.Sprintf("%s=%s", tag, err.Param())
-			}
-
-			errMsg := fmt.Sprintf("Invalid field %s: the value must be '%s'. The value received is '%v'",
-				err.Field(), tag, err.Value())
-			if mErr == nil {
-				mErr = merry.New(errMsg)
-			} else {
-				mErr = merry.Append(mErr, fmt.Sprintf("\n%s", errMsg))
-			}
-		}
-
-		return mErr.WithHTTPCode(http.StatusUnprocessableEntity)
+	if err == nil {
+		return nil
 	}
 
-	return nil
+	var sb strings.Builder
+	for i, err := range err.(validator.ValidationErrors) {
+		if i > 0 {
+			sb.WriteByte('\n')
+		}
+
+		sb.WriteString("Invalid field ")
+		sb.WriteString(err.Field())
+		sb.WriteString(": the value must be '")
+
+		tag := err.ActualTag()
+		sb.WriteString(tag)
+		if err.Param() != "" {
+			sb.WriteByte('=')
+			sb.WriteString(err.Param())
+		}
+
+		sb.WriteString("'. The value received is ")
+		sb.WriteString(fmt.Sprintf("'%v'.", err.Value()))
+	}
+
+	return uerr.NewError(uerr.WrongInputParameterError, sb.String())
 }

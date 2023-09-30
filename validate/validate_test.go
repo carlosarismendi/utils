@@ -1,10 +1,9 @@
 package validate
 
 import (
-	"net/http"
 	"testing"
 
-	"github.com/ansel1/merry"
+	"github.com/carlosarismendi/utils/uerr"
 	"github.com/stretchr/testify/require"
 )
 
@@ -39,8 +38,9 @@ func TestValidate(t *testing.T) {
 
 		// ASSERT
 		require.Error(t, err)
-		require.Equal(t, "Invalid field ID: the value must be 'uuid'. The value received is 'INVALID_ID'", err.Error())
-		require.Equal(t, http.StatusUnprocessableEntity, merry.HTTPCode(err))
+		require.Equal(t, "Invalid field ID: the value must be 'uuid'. The value received is 'INVALID_ID'.",
+			uerr.GetMessage(err))
+		require.Equal(t, uerr.WrongInputParameterError, uerr.GetKey(err))
 	})
 
 	t.Run("ValidatingStructWithTwoInvalidFields_returnsStatusUnprocessableEntity", func(t *testing.T) {
@@ -56,8 +56,8 @@ func TestValidate(t *testing.T) {
 
 		// ASSERT
 		require.Error(t, err)
-		require.Equal(t, "Invalid field ID: the value must be 'uuid'. The value received is 'INVALID_ID': "+
-			"\nInvalid field Age: the value must be 'min=0'. The value received is '-1'", err.Error())
-		require.Equal(t, http.StatusUnprocessableEntity, merry.HTTPCode(err))
+		require.Equal(t, "Invalid field ID: the value must be 'uuid'. The value received is 'INVALID_ID'."+
+			"\nInvalid field Age: the value must be 'min=0'. The value received is '-1'.", uerr.GetMessage(err))
+		require.Equal(t, uerr.WrongInputParameterError, uerr.GetKey(err))
 	})
 }
