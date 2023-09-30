@@ -20,7 +20,7 @@ type Resource struct {
 
 func createResourceTable(t testing.TB, r *DBrepository) {
 	err := r.GetDBInstance(context.Background()).
-		Exec("CREATE TABLE resources (id UUID, name TEXT, random_number INTEGER);").Error
+		Exec("CREATE TABLE resources (id UUID PRIMARY KEY, name TEXT, random_number INTEGER);").Error
 	require.NoError(t, err)
 }
 
