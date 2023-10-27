@@ -8,9 +8,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/carlosarismendi/utils/db/dbdomain"
-	"github.com/carlosarismendi/utils/db/infrastructure/filters"
-	usqlFilters "github.com/carlosarismendi/utils/db/infrastructure/usql/filters"
+	"github.com/carlosarismendi/utils/udatabase"
+	"github.com/carlosarismendi/utils/udatabase/filters"
+	usqlFilters "github.com/carlosarismendi/utils/udatabase/usql/filters"
 	"github.com/carlosarismendi/utils/uerr"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -154,7 +154,7 @@ func (r *DBrepository) GetContext(ctx context.Context, db Querier, dst interface
 }
 
 func (r *DBrepository) SelectContext(ctx context.Context, db Querier, dst interface{}, query string,
-	v url.Values) (rp *dbdomain.ResourcePage, err error) {
+	v url.Values) (rp *udatabase.ResourcePage, err error) {
 	query, args, limit, offset, err := r.ApplyFilters(db, query, v)
 	if err != nil {
 		return nil, err
@@ -173,7 +173,7 @@ func (r *DBrepository) SelectContext(ctx context.Context, db Querier, dst interf
 		return nil, uerr.NewError(uerr.WrongInputParameterError, `"dst" parameter must be a slice.`)
 	}
 
-	rp = &dbdomain.ResourcePage{
+	rp = &udatabase.ResourcePage{
 		Total:     int64(exp.Len()),
 		Limit:     limit,
 		Offset:    offset,

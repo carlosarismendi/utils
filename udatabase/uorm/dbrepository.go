@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/carlosarismendi/utils/db/dbdomain"
-	"github.com/carlosarismendi/utils/db/infrastructure/filters"
-	uormFilters "github.com/carlosarismendi/utils/db/infrastructure/uorm/filters"
+	"github.com/carlosarismendi/utils/udatabase"
+	"github.com/carlosarismendi/utils/udatabase/filters"
+	uormFilters "github.com/carlosarismendi/utils/udatabase/uorm/filters"
 	"github.com/carlosarismendi/utils/uerr"
 	"gorm.io/gorm"
 )
@@ -135,7 +135,7 @@ func (r *DBrepository) FindByID(ctx context.Context, id string, dest interface{}
 //	v.Add("field", "value to use to filter")
 //	v.Add("sort", "field")  // sort in ascending order
 //	v.Add("sort", "-field") // sort in descending order
-func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) (*dbdomain.ResourcePage, error) {
+func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) (*udatabase.ResourcePage, error) {
 	db := r.GetDBInstance(ctx)
 	db, limit, err := r.applyLimit(db, v)
 	if err != nil {
@@ -171,7 +171,7 @@ func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) 
 		return nil, rErr
 	}
 
-	rp := &dbdomain.ResourcePage{
+	rp := &udatabase.ResourcePage{
 		Total:     result.RowsAffected,
 		Limit:     limit,
 		Offset:    offset,

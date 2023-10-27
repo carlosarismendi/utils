@@ -3,7 +3,7 @@ package uorm
 import (
 	"context"
 
-	"github.com/carlosarismendi/utils/db/infrastructure"
+	"github.com/carlosarismendi/utils/udatabase"
 
 	// nolint:blank-imports // it is necessary to run the SQL migrations.
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -14,14 +14,14 @@ import (
 )
 
 type DBHolder struct {
-	config *infrastructure.DBConfig
+	config *udatabase.DBConfig
 	db     *gorm.DB
 }
 
 // Returns a *DBHolder initialized with the provided config.
 // In case the *DBConfig object has zero values, those will
 // be filled with default values.
-func NewDBHolder(config *infrastructure.DBConfig) *DBHolder {
+func NewDBHolder(config *udatabase.DBConfig) *DBHolder {
 	config.SetEmptyValuesToDefaults()
 
 	conn := config.GetConnectionString()
@@ -54,7 +54,7 @@ func (d *DBHolder) RunMigrations() error {
 	if err != nil {
 		panic(err)
 	}
-	return infrastructure.RunMigrations(sdb, d.config)
+	return udatabase.RunMigrations(sdb, d.config)
 }
 
 // GetDBInstance returns the inner database object *gorm.DB provided by GORM.

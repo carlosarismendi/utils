@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/carlosarismendi/utils/db/dbdomain"
-	uormFilters "github.com/carlosarismendi/utils/db/infrastructure/uorm/filters"
+	"github.com/carlosarismendi/utils/udatabase"
+	uormFilters "github.com/carlosarismendi/utils/udatabase/uorm/filters"
 	"github.com/carlosarismendi/utils/uerr"
 	"github.com/stretchr/testify/require"
 )
@@ -40,11 +40,11 @@ func TestTransactions(t *testing.T) {
 		}
 
 		err := func() (rErr error) {
-			ctx, err := dbdomain.BeginTx(context.Background(), r)
+			ctx, err := udatabase.BeginTx(context.Background(), r)
 			if err != nil {
 				return err
 			}
-			defer dbdomain.EndTx(ctx, r, &rErr)
+			defer udatabase.EndTx(ctx, r, &rErr)
 
 			// ACT
 			return r.Save(ctx, &resource)
@@ -69,11 +69,11 @@ func TestTransactions(t *testing.T) {
 		}
 
 		err := func() (rErr error) {
-			ctx, err := dbdomain.BeginTx(context.Background(), r)
+			ctx, err := udatabase.BeginTx(context.Background(), r)
 			if err != nil {
 				return err
 			}
-			defer dbdomain.EndTx(ctx, r, &rErr)
+			defer udatabase.EndTx(ctx, r, &rErr)
 
 			// ACT
 			err = r.Save(ctx, &validResource)
@@ -116,11 +116,11 @@ func TestTransactions(t *testing.T) {
 		}()
 
 		err := func() (rErr error) {
-			ctx, err := dbdomain.BeginTx(context.Background(), r)
+			ctx, err := udatabase.BeginTx(context.Background(), r)
 			if err != nil {
 				return err
 			}
-			defer dbdomain.EndTx(ctx, r, &rErr)
+			defer udatabase.EndTx(ctx, r, &rErr)
 
 			// ACT
 			err = r.Save(ctx, &resource)
@@ -199,7 +199,7 @@ func TestFindWithFilters(t *testing.T) {
 		{
 			name:    "FindingWithoutFilters",
 			filters: url.Values{},
-			expected: &dbdomain.ResourcePage{
+			expected: &udatabase.ResourcePage{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -210,7 +210,7 @@ func TestFindWithFilters(t *testing.T) {
 		{
 			name:    "FindingFilteringByTextFieldName",
 			filters: createFilter("name", "Resource1"),
-			expected: &dbdomain.ResourcePage{
+			expected: &udatabase.ResourcePage{
 				Total:     1,
 				Limit:     10,
 				Offset:    0,
@@ -221,7 +221,7 @@ func TestFindWithFilters(t *testing.T) {
 		{
 			name:    "FindingFilteringByTextFieldID",
 			filters: createFilter("id", "5ceff18d-9039-44b5-a5d3-3d99653f4603"),
-			expected: &dbdomain.ResourcePage{
+			expected: &udatabase.ResourcePage{
 				Total:     1,
 				Limit:     10,
 				Offset:    0,
@@ -232,7 +232,7 @@ func TestFindWithFilters(t *testing.T) {
 		{
 			name:    "FindingFilteringByMultipleValuesInNumberField",
 			filters: createFilter("name", "Resource1", "Resource2"),
-			expected: &dbdomain.ResourcePage{
+			expected: &udatabase.ResourcePage{
 				Total:     2,
 				Limit:     10,
 				Offset:    0,
@@ -243,7 +243,7 @@ func TestFindWithFilters(t *testing.T) {
 		{
 			name:    "FindingFilteringByMultipleValuesInNumberField",
 			filters: createFilter("random_number", "2", "0"),
-			expected: &dbdomain.ResourcePage{
+			expected: &udatabase.ResourcePage{
 				Total:     3,
 				Limit:     10,
 				Offset:    0,
@@ -254,7 +254,7 @@ func TestFindWithFilters(t *testing.T) {
 		{
 			name:    "FindingFilteringBothByNumberAndTextField",
 			filters: createFilters(newFilter("random_number", "2"), newFilter("name", "Resource3")),
-			expected: &dbdomain.ResourcePage{
+			expected: &udatabase.ResourcePage{
 				Total:     1,
 				Limit:     10,
 				Offset:    0,
@@ -289,7 +289,7 @@ func TestFindWithSorters(t *testing.T) {
 		{
 			name:    "FindingSortingByTextFieldNameAsc",
 			filters: createFilter("sort", "name"),
-			expected: &dbdomain.ResourcePage{
+			expected: &udatabase.ResourcePage{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -300,7 +300,7 @@ func TestFindWithSorters(t *testing.T) {
 		{
 			name:    "FindingSortingByTextFieldNameDesc",
 			filters: createFilter("sort", "-name"),
-			expected: &dbdomain.ResourcePage{
+			expected: &udatabase.ResourcePage{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -311,7 +311,7 @@ func TestFindWithSorters(t *testing.T) {
 		{
 			name:    "FindingSortingByFieldRandomNumberAsc",
 			filters: createFilter("sort", "random_number"),
-			expected: &dbdomain.ResourcePage{
+			expected: &udatabase.ResourcePage{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -322,7 +322,7 @@ func TestFindWithSorters(t *testing.T) {
 		{
 			name:    "FindingSortingByNumFieldRandomNumberDesc",
 			filters: createFilter("sort", "-random_number"),
-			expected: &dbdomain.ResourcePage{
+			expected: &udatabase.ResourcePage{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -336,7 +336,7 @@ func TestFindWithSorters(t *testing.T) {
 				newFilter("sort", "-random_number"),
 				newFilter("limit", "2"),
 			),
-			expected: &dbdomain.ResourcePage{
+			expected: &udatabase.ResourcePage{
 				Total:     2,
 				Limit:     2,
 				Offset:    0,
@@ -350,7 +350,7 @@ func TestFindWithSorters(t *testing.T) {
 				newFilter("sort", "-random_number"),
 				newFilter("offset", "2"),
 			),
-			expected: &dbdomain.ResourcePage{
+			expected: &udatabase.ResourcePage{
 				Total:     2,
 				Limit:     10,
 				Offset:    2,
@@ -361,7 +361,7 @@ func TestFindWithSorters(t *testing.T) {
 		{
 			name:    "FindingSortingByNameAscAndRandomNumberAsc",
 			filters: createFilter("sort", "name", "random_number"),
-			expected: &dbdomain.ResourcePage{
+			expected: &udatabase.ResourcePage{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -372,7 +372,7 @@ func TestFindWithSorters(t *testing.T) {
 		{
 			name:    "FindingSortingByNameAscAndRandomNumberDesc",
 			filters: createFilter("sort", "name", "-random_number"),
-			expected: &dbdomain.ResourcePage{
+			expected: &udatabase.ResourcePage{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -451,7 +451,7 @@ func createFilter(key string, values ...string) url.Values {
 type findTest struct {
 	name          string
 	filters       url.Values
-	expected      *dbdomain.ResourcePage
+	expected      *udatabase.ResourcePage
 	considerOrder bool
 }
 

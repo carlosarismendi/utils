@@ -3,7 +3,7 @@ package uorm
 import (
 	"fmt"
 
-	"github.com/carlosarismendi/utils/db/infrastructure"
+	"github.com/carlosarismendi/utils/udatabase"
 )
 
 type TestDBHolder struct {
@@ -11,7 +11,7 @@ type TestDBHolder struct {
 }
 
 func NewTestDBHolder(schemaName string) *TestDBHolder {
-	cfg := infrastructure.NewDBConfigFromEnv()
+	cfg := udatabase.NewDBConfigFromEnv()
 	cfg.SchemaName = schemaName
 	return &TestDBHolder{
 		DBHolder: NewDBHolder(cfg),

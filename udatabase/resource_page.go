@@ -1,4 +1,4 @@
-package dbdomain
+package udatabase
 
 type ResourcePage struct {
 	Total     int64       `json:"total"`

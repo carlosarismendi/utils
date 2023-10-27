@@ -1,7 +1,7 @@
 package filters
 
 import (
-	"github.com/carlosarismendi/utils/db/infrastructure/filters"
+	"github.com/carlosarismendi/utils/udatabase/filters"
 )
 
 type TextFieldFilter struct {

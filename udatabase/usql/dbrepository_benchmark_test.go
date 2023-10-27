@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"testing"
 
-	usqlFilters "github.com/carlosarismendi/utils/db/infrastructure/usql/filters"
+	usqlFilters "github.com/carlosarismendi/utils/udatabase/usql/filters"
 )
 
 type filtersBenchmark struct {

@@ -1,4 +1,4 @@
-package dbdomain
+package udatabase
 
 import "context"
 

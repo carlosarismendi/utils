@@ -1,7 +1,7 @@
 package usql
 
 import (
-	"github.com/carlosarismendi/utils/db/infrastructure"
+	"github.com/carlosarismendi/utils/udatabase"
 
 	// nolint:blank-imports // it is necessary to run the SQL migrations.
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -10,14 +10,14 @@ import (
 )
 
 type DBHolder struct {
-	config *infrastructure.DBConfig
+	config *udatabase.DBConfig
 	db     *sqlx.DB
 }
 
 // Returns a *DBHolder initialized with the provided config.
 // In case the *DBConfig object has zero values, those will
 // be filled with default values.
-func NewDBHolder(config *infrastructure.DBConfig) *DBHolder {
+func NewDBHolder(config *udatabase.DBConfig) *DBHolder {
 	config.SetEmptyValuesToDefaults()
 
 	conn := config.GetConnectionString()
@@ -39,7 +39,7 @@ func NewDBHolder(config *infrastructure.DBConfig) *DBHolder {
 
 // RunMigrations runs SQL migrations found in the folder specified by DBConfig.MigrationsDir
 func (d *DBHolder) RunMigrations() error {
-	return infrastructure.RunMigrations(d.db.DB, d.config)
+	return udatabase.RunMigrations(d.db.DB, d.config)
 }
 
 // GetDBInstance returns the inner database object *sqlx.DB provided by sqlx.

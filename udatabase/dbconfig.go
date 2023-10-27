@@ -1,4 +1,4 @@
-package infrastructure
+package udatabase
 
 import (
 	"database/sql"
