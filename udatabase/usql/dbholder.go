@@ -47,3 +47,7 @@ func (d *DBHolder) RunMigrations() error {
 func (d *DBHolder) GetDBInstance() *sqlx.DB {
 	return d.db
 }
+
+func (d *DBHolder) MapperFunc(mf func(string) string) {
+	d.db.MapperFunc(mf)
+}
