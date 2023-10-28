@@ -8,7 +8,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var defaultFilenames = []string{".env", ".env.local"}
+// Priority from left (highest) to right (lowest)
+var defaultFilenames = []string{".env.local", ".env.production", ".env"}
 
 func Load(filenames ...string) {
 	dir, err := os.Getwd()
