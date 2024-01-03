@@ -16,11 +16,6 @@ import (
 	"github.com/lib/pq"
 )
 
-var pqErrors = map[string]*uerr.UError{
-	"unique_violation":   uerr.NewError(uerr.ResourceAlreadyExistsError, "Resource already exists."),
-	"not_null_violation": uerr.NewError(uerr.WrongInputParameterError, "Missing required value."),
-}
-
 type ctxk string
 
 const transactionName string = "dbtx"
@@ -115,7 +110,7 @@ func (r *DBrepository) HandleSaveOrUpdateError(res sql.Result, err error) error 
 	}
 
 	if pqErr, ok := err.(*pq.Error); ok {
-		if rErr, ok := pqErrors[pqErr.Code.Name()]; ok {
+		if rErr, ok := udatabase.PqErrors[pqErr.Code.Name()]; ok {
 			return rErr.WithCause(err)
 		}
 	}

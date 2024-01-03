@@ -141,7 +141,7 @@ func getErrorMessage(expected, actual interface{}) string {
 	expectedJSON, _ := json.Marshal(expected)
 	actualJSON, _ := json.Marshal(actual)
 
-	msg := fmt.Sprintf("Expected: %s", string(expectedJSON))
+	msg := fmt.Sprintf("\nExpected: %s", string(expectedJSON))
 	msg += fmt.Sprintf("\nActual: %s", string(actualJSON))
 	return msg
 }

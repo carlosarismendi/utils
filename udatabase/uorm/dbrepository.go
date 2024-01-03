@@ -10,6 +10,8 @@ import (
 	"github.com/carlosarismendi/utils/udatabase/filters"
 	uormFilters "github.com/carlosarismendi/utils/udatabase/uorm/filters"
 	"github.com/carlosarismendi/utils/uerr"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -80,6 +82,14 @@ func (r *DBrepository) Rollback(ctx context.Context) {
 func (r *DBrepository) Save(ctx context.Context, value interface{}) error {
 	db := r.GetDBInstance(ctx)
 	err := db.Save(value).Error
+
+	return r.HandleSaveOrUpdateError(err)
+}
+
+// Create is a function that creates the resource in the database.
+func (r *DBrepository) Create(ctx context.Context, value interface{}) error {
+	db := r.GetDBInstance(ctx)
+	err := db.Create(value).Error
 
 	return r.HandleSaveOrUpdateError(err)
 }
@@ -196,6 +206,17 @@ func (r *DBrepository) HandleSaveOrUpdateError(err error) error {
 
 	if errors.Is(err, gorm.ErrDuplicatedKey) {
 		return uerr.NewError(uerr.ResourceAlreadyExistsError, "Resource already exists.").WithCause(err)
+	}
+
+	if pqErr, ok := err.(*pq.Error); ok {
+		if rErr, ok := udatabase.PqErrors[pqErr.Code.Name()]; ok {
+			return rErr.WithCause(err)
+		}
+	} else if pgErr, ok := err.(*pgconn.PgError); ok {
+		pqErr := pq.Error{Code: pq.ErrorCode(pgErr.Code)}
+		if rErr, ok := udatabase.PqErrors[pqErr.Code.Name()]; ok {
+			return rErr.WithCause(err)
+		}
 	}
 
 	return uerr.NewError(uerr.GenericError, "Error saving or updating resource.").WithCause(err)
