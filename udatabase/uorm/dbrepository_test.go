@@ -269,6 +269,107 @@ func TestFindWithFilters(t *testing.T) {
 	}
 }
 
+func TestFindWithValuedFilters(t *testing.T) {
+	dbHolder := NewTestDBHolder("db_orm_repository_test_find")
+	dbHolder.Reset()
+
+	filtersMap := map[string]uormFilters.Filter{
+		"id":            uormFilters.TextField("id"),
+		"name":          uormFilters.TextField("name"),
+		"random_number": uormFilters.NumField("random_number"),
+		"sort":          uormFilters.Sorter("name", "random_number"),
+	}
+
+	r := NewDBRepository(dbHolder.DBHolder, filtersMap)
+	createResourceTable(t, r)
+
+	r1, r2, r3, r4 := populateDB(context.Background(), t, r)
+
+	tests := []findTest{
+		{
+			name:          "FindingWithoutFilters",
+			valuedFilters: nil,
+			expected: &udatabase.ResourcePage{
+				Total:     4,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r1, r2, r4, r3},
+			},
+			considerOrder: false,
+		},
+		{
+			name: "FindingFilteringByTextFieldName",
+			valuedFilters: []uormFilters.ValuedFilter{
+				uormFilters.TextFieldWithValue("name", "Resource1"),
+			},
+			expected: &udatabase.ResourcePage{
+				Total:     1,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r1},
+			},
+			considerOrder: true,
+		},
+		{
+			name: "FindingFilteringByTextFieldID",
+			valuedFilters: []uormFilters.ValuedFilter{
+				uormFilters.TextFieldWithValue("id", "5ceff18d-9039-44b5-a5d3-3d99653f4603"),
+			},
+			expected: &udatabase.ResourcePage{
+				Total:     1,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r3},
+			},
+			considerOrder: true,
+		},
+		{
+			name: "FindingFilteringByMultipleValuesInNumberField",
+			valuedFilters: []uormFilters.ValuedFilter{
+				uormFilters.TextFieldWithValue("name", "Resource1", "Resource2"),
+			},
+			expected: &udatabase.ResourcePage{
+				Total:     2,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r1, r2},
+			},
+			considerOrder: false,
+		},
+		{
+			name: "FindingFilteringByMultipleValuesInNumberField",
+			valuedFilters: []uormFilters.ValuedFilter{
+				uormFilters.NumFieldWithValue("random_number", "2", "0"),
+			},
+			expected: &udatabase.ResourcePage{
+				Total:     3,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r2, r3, r4},
+			},
+			considerOrder: false,
+		},
+		{
+			name: "FindingFilteringBothByNumberAndTextField",
+			valuedFilters: []uormFilters.ValuedFilter{
+				uormFilters.NumFieldWithValue("random_number", "2"),
+				uormFilters.TextFieldWithValue("name", "Resource3"),
+			},
+			expected: &udatabase.ResourcePage{
+				Total:     1,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r3},
+			},
+			considerOrder: false,
+		},
+	}
+
+	for _, ft := range tests {
+		t.Run(ft.name, ft.testRunWithValuedFilters(r))
+	}
+}
+
 func TestFindWithSorters(t *testing.T) {
 	dbHolder := NewTestDBHolder("db_orm_repository_test_find")
 	dbHolder.Reset()
@@ -451,6 +552,7 @@ func createFilter(key string, values ...string) url.Values {
 type findTest struct {
 	name          string
 	filters       url.Values
+	valuedFilters []uormFilters.ValuedFilter
 	expected      *udatabase.ResourcePage
 	considerOrder bool
 }
@@ -464,6 +566,34 @@ func (ft *findTest) testRun(r *DBrepository) func(*testing.T) {
 		// ACT
 		var resources []*Resource
 		rp, err := r.Find(context.Background(), ft.filters, &resources)
+
+		// ASSERT
+		require.NoError(t, err)
+		require.EqualValues(t, ft.expected.Total, len(resources))
+		require.EqualValues(t, ft.expected.Total, rp.Total)
+		require.EqualValues(t, ft.expected.Total, len(*rp.Resources.(*[]*Resource)))
+		require.EqualValues(t, ft.expected.Offset, rp.Offset)
+		require.EqualValues(t, ft.expected.Limit, rp.Limit)
+
+		if ft.considerOrder {
+			require.Equal(t, expectedResources, resources)
+		} else {
+			for _, expRes := range expectedResources {
+				require.Contains(t, resources, expRes)
+			}
+		}
+	}
+}
+
+func (ft *findTest) testRunWithValuedFilters(r *DBrepository) func(*testing.T) {
+	return func(t *testing.T) {
+		// ARRANGE
+		expectedResources := ft.expected.Resources.([]*Resource)
+		require.EqualValues(t, len(expectedResources), ft.expected.Total, "Expected Total and Resources doesn't match.")
+
+		// ACT
+		var resources []*Resource
+		rp, err := r.FindWithFilters(context.Background(), &resources, ft.valuedFilters...)
 
 		// ASSERT
 		require.NoError(t, err)

@@ -17,9 +17,9 @@ func NumField(field string) Filter {
 	}
 }
 
-func NumFieldWithValue(field, value string) ValuedFilter {
-	return func(db *gorm.DB, rp *udatabase.ResourcePage) (*gorm.DB, error) {
-		query, args, err := filters.ApplyNumField(field, value)
+func NumFieldWithValue(field string, values ...string) ValuedFilter {
+	return func(db *gorm.DB, _ *udatabase.ResourcePage) (*gorm.DB, error) {
+		query, args, err := filters.ApplyNumField(field, values...)
 		if err != nil {
 			return nil, err
 		}

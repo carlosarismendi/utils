@@ -1,6 +1,8 @@
 linters-settings:
   govet:
-    check-shadowing: true
+    enable-all: true
+    disable:
+      - fieldalignment
 
   gocyclo:
     min-complexity: 16
@@ -16,7 +18,14 @@ linters-settings:
     min-occurrences: 2
 
   depguard:
-    list-type: blacklist
+    rules:
+      main:
+        list-mode: lax
+        file:
+          - $all
+        deny:
+          - pkg: github.com/labstack/echo$
+            desc: Please use v4
 
   misspell:
     locale: US
@@ -80,6 +89,5 @@ run:
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-
-service:
-  golangci-lint-version: 1.20.x
+  exclude:
+    - "DateTime not declared by package time"

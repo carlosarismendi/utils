@@ -191,10 +191,17 @@ func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) 
 	return rp, nil
 }
 
-func (r *DBrepository) FindWithFilters(ctx context.Context, dst interface{}, filters ...uormFilters.ValuedFilter) (*udatabase.ResourcePage, error) {
+func (r *DBrepository) FindWithFilters(ctx context.Context, dst interface{},
+	fs ...uormFilters.ValuedFilter) (*udatabase.ResourcePage, error) {
+	fsArr := append(
+		make([]uormFilters.ValuedFilter, 0, len(fs)+1),
+		uormFilters.LimitWithValue(""),
+	)
+	fsArr = append(fsArr, fs...)
+
 	db := r.GetDBInstance(ctx)
 	rp := &udatabase.ResourcePage{}
-	for _, filter := range filters {
+	for _, filter := range fsArr {
 		var err error
 		db, err = filter(db, rp)
 		if err != nil {
@@ -211,6 +218,14 @@ func (r *DBrepository) FindWithFilters(ctx context.Context, dst interface{}, fil
 	rp.Resources = dst
 	rp.Total = result.RowsAffected
 	return rp, nil
+}
+
+func (r *DBrepository) ParseLimit(v url.Values) (uormFilters.ValuedFilter, error) {
+	return uormFilters.LimitWithValue(v.Get("limit")), nil
+}
+
+func (r *DBrepository) ParseOffset(v url.Values) (uormFilters.ValuedFilter, error) {
+	return uormFilters.OffsetWithValue(v.Get("offset")), nil
 }
 
 // IsResourceNotFound in case of running custom SELECT queries using *gorm.DB, this method
@@ -230,15 +245,16 @@ func (r *DBrepository) HandleSaveOrUpdateError(err error) error {
 		return uerr.NewError(uerr.ResourceAlreadyExistsError, "Resource already exists.").WithCause(err)
 	}
 
-	if pqErr, ok := err.(*pq.Error); ok {
-		if rErr, ok := udatabase.PqErrors[pqErr.Code.Name()]; ok {
-			return rErr.WithCause(err)
-		}
-	} else if pgErr, ok := err.(*pgconn.PgError); ok {
-		pqErr := pq.Error{Code: pq.ErrorCode(pgErr.Code)}
-		if rErr, ok := udatabase.PqErrors[pqErr.Code.Name()]; ok {
-			return rErr.WithCause(err)
-		}
+	var pqErr *pq.Error
+	switch v := err.(type) {
+	case *pq.Error:
+		pqErr = v
+	case *pgconn.PgError:
+		pqErr = &pq.Error{Code: pq.ErrorCode(v.Code)}
+	}
+
+	if rErr, ok := udatabase.PqErrors[pqErr.Code.Name()]; ok {
+		return rErr.WithCause(err)
 	}
 
 	return uerr.NewError(uerr.GenericError, "Error saving or updating resource.").WithCause(err)

@@ -21,7 +21,7 @@ func ApplySorter(allowedFields map[string]bool, values ...string) (queryResult s
 		sb.WriteString(column)
 		sb.WriteByte(' ')
 
-		if len(direction) > 0 {
+		if direction != "" {
 			sb.WriteString(direction)
 		}
 		sep = ','

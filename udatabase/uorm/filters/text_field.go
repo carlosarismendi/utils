@@ -17,9 +17,9 @@ func TextField(field string) Filter {
 	}
 }
 
-func TextFieldWithValue(field, value string) ValuedFilter {
+func TextFieldWithValue(field string, values ...string) ValuedFilter {
 	return func(db *gorm.DB, _ *udatabase.ResourcePage) (*gorm.DB, error) {
-		query, args, err := filters.ApplyTextField(field, value)
+		query, args, err := filters.ApplyTextField(field, values...)
 		if err != nil {
 			return nil, err
 		}
