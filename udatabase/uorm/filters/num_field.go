@@ -1,25 +1,29 @@
 package filters
 
 import (
+	"github.com/carlosarismendi/utils/udatabase"
 	"github.com/carlosarismendi/utils/udatabase/filters"
 	"gorm.io/gorm"
 )
 
-type NumFieldFilter struct {
-	field string
-}
+func NumField(field string) Filter {
+	return func(db *gorm.DB, values []string, _ *udatabase.ResourcePage) (*gorm.DB, error) {
+		query, args, err := filters.ApplyNumField(field, values...)
+		if err != nil {
+			return nil, err
+		}
 
-func NumField(field string) *NumFieldFilter {
-	return &NumFieldFilter{
-		field: field,
+		return db.Where(query, args...), nil
 	}
 }
 
-func (f *NumFieldFilter) Apply(db *gorm.DB, values []string) (*gorm.DB, error) {
-	query, args, err := filters.ApplyNumField(f.field, values)
-	if err != nil {
-		return nil, err
-	}
+func NumFieldWithValue(field, value string) ValuedFilter {
+	return func(db *gorm.DB, rp *udatabase.ResourcePage) (*gorm.DB, error) {
+		query, args, err := filters.ApplyNumField(field, value)
+		if err != nil {
+			return nil, err
+		}
 
-	return db.Where(query, args...), nil
+		return db.Where(query, args...), nil
+	}
 }

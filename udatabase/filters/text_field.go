@@ -2,7 +2,7 @@ package filters
 
 import "strings"
 
-func ApplyTextField(fieldName string, values []string) (conds string, args []interface{}, rErr error) {
+func ApplyTextField(fieldName string, values ...string) (conds string, args []interface{}, rErr error) {
 	amountValues := len(values)
 	if amountValues == 0 {
 		return "", args, rErr

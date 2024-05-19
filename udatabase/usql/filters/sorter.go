@@ -19,5 +19,5 @@ func Sort(fields ...string) *SortFilter {
 }
 
 func (f *SortFilter) Apply(values []string) (string, error) {
-	return filters.ApplySorter(f.allowedFields, values)
+	return filters.ApplySorter(f.allowedFields, values...)
 }

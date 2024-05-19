@@ -7,7 +7,7 @@ import (
 	"github.com/carlosarismendi/utils/uerr"
 )
 
-func ApplySorter(allowedFields map[string]bool, values []string) (queryResult string, rErr error) {
+func ApplySorter(allowedFields map[string]bool, values ...string) (queryResult string, rErr error) {
 	sep := byte(' ')
 	var sb strings.Builder
 	var column, direction string

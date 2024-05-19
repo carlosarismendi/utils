@@ -7,7 +7,6 @@ import (
 	"net/url"
 
 	"github.com/carlosarismendi/utils/udatabase"
-	"github.com/carlosarismendi/utils/udatabase/filters"
 	uormFilters "github.com/carlosarismendi/utils/udatabase/uorm/filters"
 	"github.com/carlosarismendi/utils/uerr"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -147,15 +146,21 @@ func (r *DBrepository) FindByID(ctx context.Context, id string, dest interface{}
 //	v.Add("sort", "-field") // sort in descending order
 func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) (*udatabase.ResourcePage, error) {
 	db := r.GetDBInstance(ctx)
-	db, limit, err := r.applyLimit(db, v)
-	if err != nil {
-		return nil, err
-	}
 
-	db, offset, err := r.applyOffset(db, v)
+	rp := &udatabase.ResourcePage{}
+	limit := v["limit"]
+	db, err := uormFilters.Limit()(db, limit, rp)
 	if err != nil {
 		return nil, err
 	}
+	v.Del("limit")
+
+	offset := v["offset"]
+	db, err = uormFilters.Offset()(db, offset, rp)
+	if err != nil {
+		return nil, err
+	}
+	v.Del("offset")
 
 	for key, values := range v {
 		if len(values) == 0 {
@@ -169,7 +174,7 @@ func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) 
 		}
 
 		var err error
-		db, err = filter.Apply(db, values)
+		db, err = filter(db, values, rp)
 		if err != nil {
 			return nil, err
 		}
@@ -181,13 +186,30 @@ func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) 
 		return nil, rErr
 	}
 
-	rp := &udatabase.ResourcePage{
-		Total:     result.RowsAffected,
-		Limit:     limit,
-		Offset:    offset,
-		Resources: dst,
+	rp.Resources = dst
+	rp.Total = result.RowsAffected
+	return rp, nil
+}
+
+func (r *DBrepository) FindWithFilters(ctx context.Context, dst interface{}, filters ...uormFilters.ValuedFilter) (*udatabase.ResourcePage, error) {
+	db := r.GetDBInstance(ctx)
+	rp := &udatabase.ResourcePage{}
+	for _, filter := range filters {
+		var err error
+		db, err = filter(db, rp)
+		if err != nil {
+			return nil, err
+		}
 	}
 
+	result := db.Find(dst)
+	if result.Error != nil {
+		rErr := uerr.NewError(uerr.GenericError, "Error finding resources.").WithCause(result.Error)
+		return nil, rErr
+	}
+
+	rp.Resources = dst
+	rp.Total = result.RowsAffected
 	return rp, nil
 }
 
@@ -220,31 +242,6 @@ func (r *DBrepository) HandleSaveOrUpdateError(err error) error {
 	}
 
 	return uerr.NewError(uerr.GenericError, "Error saving or updating resource.").WithCause(err)
-}
-
-func (r *DBrepository) applyLimit(db *gorm.DB, v url.Values) (*gorm.DB, int64, error) {
-	values, ok := v["limit"]
-	var limit string
-	if ok {
-		limit = values[0]
-		v.Del("limit")
-	} else {
-		return db.Limit(filters.DefaultLimit), filters.DefaultLimit, nil
-	}
-
-	return applyLimit(db, limit)
-}
-
-func (r *DBrepository) applyOffset(db *gorm.DB, v url.Values) (*gorm.DB, int64, error) {
-	values, ok := v["offset"]
-	if !ok {
-		return db, 0, nil
-	}
-
-	offset := values[0]
-
-	v.Del("offset")
-	return applyOffset(db, offset)
 }
 
 func (r *DBrepository) GetDBInstance(ctx context.Context) *gorm.DB {

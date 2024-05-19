@@ -15,5 +15,5 @@ func TextField(field string) *TextFieldFilter {
 }
 
 func (f *TextFieldFilter) Apply(values []string) (queryResult string, args []interface{}, rErr error) {
-	return filters.ApplyTextField(f.field, values)
+	return filters.ApplyTextField(f.field, values...)
 }

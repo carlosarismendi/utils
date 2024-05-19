@@ -8,7 +8,7 @@ import (
 	"github.com/carlosarismendi/utils/uerr"
 )
 
-func ApplyNumField(fieldName string, values []string) (conds string, args []interface{}, rErr error) {
+func ApplyNumField(fieldName string, values ...string) (conds string, args []interface{}, rErr error) {
 	amountValues := len(values)
 	if amountValues == 0 {
 		return "", args, rErr

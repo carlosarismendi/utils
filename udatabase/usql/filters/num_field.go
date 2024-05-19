@@ -15,5 +15,5 @@ func NumField(field string) *NumFieldFilter {
 }
 
 func (f *NumFieldFilter) Apply(values []string) (queryResult string, args []interface{}, rErr error) {
-	return filters.ApplyNumField(f.field, values)
+	return filters.ApplyNumField(f.field, values...)
 }
