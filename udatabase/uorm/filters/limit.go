@@ -2,36 +2,41 @@ package filters
 
 import (
 	"github.com/carlosarismendi/utils/udatabase"
-	"github.com/carlosarismendi/utils/udatabase/filters"
 	"github.com/carlosarismendi/utils/uerr"
 	"gorm.io/gorm"
 	"strconv"
 )
 
-func Limit() Filter {
-	return func(db *gorm.DB, values []string, rp *udatabase.ResourcePage) (*gorm.DB, error) {
-		if len(values) < 1 {
-			rp.Limit = filters.DefaultLimit
-			return db.Limit(filters.DefaultLimit), nil
-		}
+type LimitFilter struct {
+	defaultValue int
+}
 
-		return limit(db, values[0], rp)
+func Limit(defaultValue int) *LimitFilter {
+	if defaultValue < 1 {
+		panic("Limit defaultValue must be greater than 0")
+	}
+	return &LimitFilter{
+		defaultValue: defaultValue,
 	}
 }
 
-func LimitWithValue(value string) ValuedFilter {
+func (f *LimitFilter) Apply(db *gorm.DB, values []string, rp *udatabase.ResourcePage) (*gorm.DB, error) {
+	return f.limit(db, rp, values...)
+}
+
+func (f *LimitFilter) ValuedFilterFunc(values ...string) ValuedFilter {
 	return func(db *gorm.DB, rp *udatabase.ResourcePage) (*gorm.DB, error) {
-		if value == "" {
-			rp.Limit = filters.DefaultLimit
-			return db.Limit(filters.DefaultLimit), nil
-		}
-
-		return limit(db, value, rp)
+		return f.limit(db, rp, values...)
 	}
 }
 
-func limit(db *gorm.DB, value string, rp *udatabase.ResourcePage) (*gorm.DB, error) {
-	num, err := strconv.Atoi(value)
+func (f *LimitFilter) limit(db *gorm.DB, rp *udatabase.ResourcePage, values ...string) (*gorm.DB, error) {
+	if len(values) < 1 || values[0] == "" {
+		rp.Limit = int64(f.defaultValue)
+		return db.Limit(f.defaultValue), nil
+	}
+
+	num, err := strconv.Atoi(values[0])
 	if err != nil {
 		rErr := uerr.NewError(uerr.WrongInputParameterError,
 			`Invalid value for "limit". It must be a number.`).WithCause(err)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/carlosarismendi/utils/udatabase/filters"
 	"net/url"
 
 	"github.com/carlosarismendi/utils/udatabase"
@@ -30,6 +31,18 @@ type DBrepository struct {
 // and sorters provided in the url.values{} parameter. In case the url.values contains a filter
 // that it is not in the filters map, it will return an error.
 func NewDBRepository(dbHolder *DBHolder, filtersMap map[string]uormFilters.Filter) *DBrepository {
+	if filtersMap == nil {
+		filtersMap = make(map[string]uormFilters.Filter)
+	}
+
+	if _, ok := filtersMap["limit"]; !ok {
+		filtersMap["limit"] = uormFilters.Limit(filters.DefaultLimit)
+	}
+
+	if _, ok := filtersMap["offset"]; !ok {
+		filtersMap["offset"] = uormFilters.Offset()
+	}
+
 	return &DBrepository{
 		db:      dbHolder,
 		filters: filtersMap,
@@ -147,21 +160,11 @@ func (r *DBrepository) FindByID(ctx context.Context, id string, dest interface{}
 func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) (*udatabase.ResourcePage, error) {
 	db := r.GetDBInstance(ctx)
 
+	if v.Get("limit") == "" {
+		v.Add("limit", fmt.Sprintf("%d", filters.DefaultLimit))
+	}
+
 	rp := &udatabase.ResourcePage{}
-	limit := v["limit"]
-	db, err := uormFilters.Limit()(db, limit, rp)
-	if err != nil {
-		return nil, err
-	}
-	v.Del("limit")
-
-	offset := v["offset"]
-	db, err = uormFilters.Offset()(db, offset, rp)
-	if err != nil {
-		return nil, err
-	}
-	v.Del("offset")
-
 	for key, values := range v {
 		if len(values) == 0 {
 			continue
@@ -174,7 +177,7 @@ func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) 
 		}
 
 		var err error
-		db, err = filter(db, values, rp)
+		db, err = filter.Apply(db, values, rp)
 		if err != nil {
 			return nil, err
 		}
@@ -193,15 +196,9 @@ func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) 
 
 func (r *DBrepository) FindWithFilters(ctx context.Context, dst interface{},
 	fs ...uormFilters.ValuedFilter) (*udatabase.ResourcePage, error) {
-	fsArr := append(
-		make([]uormFilters.ValuedFilter, 0, len(fs)+1),
-		uormFilters.LimitWithValue(""),
-	)
-	fsArr = append(fsArr, fs...)
-
 	db := r.GetDBInstance(ctx)
 	rp := &udatabase.ResourcePage{}
-	for _, filter := range fsArr {
+	for _, filter := range fs {
 		var err error
 		db, err = filter(db, rp)
 		if err != nil {
@@ -220,12 +217,26 @@ func (r *DBrepository) FindWithFilters(ctx context.Context, dst interface{},
 	return rp, nil
 }
 
-func (r *DBrepository) ParseLimit(v url.Values) (uormFilters.ValuedFilter, error) {
-	return uormFilters.LimitWithValue(v.Get("limit")), nil
-}
+func (r *DBrepository) ParseFilters(v url.Values) ([]uormFilters.ValuedFilter, error) {
+	if v.Get("limit") == "" {
+		v.Add("limit", fmt.Sprintf("%d", filters.DefaultLimit))
+	}
 
-func (r *DBrepository) ParseOffset(v url.Values) (uormFilters.ValuedFilter, error) {
-	return uormFilters.OffsetWithValue(v.Get("offset")), nil
+	var fs []uormFilters.ValuedFilter
+	for k, values := range v {
+		if len(values) == 0 {
+			continue
+		}
+
+		filter, ok := r.filters[k]
+		if !ok {
+			rErr := uerr.NewError(uerr.WrongInputParameterError, fmt.Sprintf("Invalid filter %q.", k))
+			return nil, rErr
+		}
+
+		fs = append(fs, filter.ValuedFilterFunc(values...))
+	}
+	return fs, nil
 }
 
 // IsResourceNotFound in case of running custom SELECT queries using *gorm.DB, this method

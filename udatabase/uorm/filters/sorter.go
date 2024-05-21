@@ -6,23 +6,41 @@ import (
 	"gorm.io/gorm"
 )
 
-func Sorter(allowedFields ...string) Filter {
+type SorterFilter struct {
+	allowedFields map[string]bool
+}
+
+func Sorter(allowedFields ...string) *SorterFilter {
 	fields := make(map[string]bool)
 	for _, f := range allowedFields {
 		fields[f] = true
 	}
 
-	return func(db *gorm.DB, values []string, _ *udatabase.ResourcePage) (*gorm.DB, error) {
-		for _, v := range values {
-			column, direction, err := filters.SortFieldAndDirection(fields, v)
-			if err != nil {
-				return nil, err
-			}
+	return &SorterFilter{
+		allowedFields: fields,
+	}
+}
 
-			sort := column + " " + direction
-			db = db.Order(sort)
+func (f *SorterFilter) Apply(db *gorm.DB, values []string, _ *udatabase.ResourcePage) (*gorm.DB, error) {
+	return f.sorter(db, values...)
+}
+
+func (f *SorterFilter) ValuedFilterFunc(values ...string) ValuedFilter {
+	return func(db *gorm.DB, _ *udatabase.ResourcePage) (*gorm.DB, error) {
+		return f.sorter(db, values...)
+	}
+}
+
+func (f *SorterFilter) sorter(db *gorm.DB, values ...string) (*gorm.DB, error) {
+	for _, v := range values {
+		column, direction, err := filters.SortFieldAndDirection(f.allowedFields, v)
+		if err != nil {
+			return nil, err
 		}
 
-		return db, nil
+		sort := column + " " + direction
+		db = db.Order(sort)
 	}
+
+	return db, nil
 }

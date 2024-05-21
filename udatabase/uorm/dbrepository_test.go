@@ -287,8 +287,8 @@ func TestFindWithValuedFilters(t *testing.T) {
 
 	tests := []findTest{
 		{
-			name:          "FindingWithoutFilters",
-			valuedFilters: nil,
+			name:    "FindingWithoutFilters",
+			filters: url.Values{},
 			expected: &udatabase.ResourcePage{
 				Total:     4,
 				Limit:     10,
@@ -298,10 +298,8 @@ func TestFindWithValuedFilters(t *testing.T) {
 			considerOrder: false,
 		},
 		{
-			name: "FindingFilteringByTextFieldName",
-			valuedFilters: []uormFilters.ValuedFilter{
-				uormFilters.TextFieldWithValue("name", "Resource1"),
-			},
+			name:    "FindingFilteringByTextFieldName",
+			filters: createFilter("name", "Resource1"),
 			expected: &udatabase.ResourcePage{
 				Total:     1,
 				Limit:     10,
@@ -311,10 +309,8 @@ func TestFindWithValuedFilters(t *testing.T) {
 			considerOrder: true,
 		},
 		{
-			name: "FindingFilteringByTextFieldID",
-			valuedFilters: []uormFilters.ValuedFilter{
-				uormFilters.TextFieldWithValue("id", "5ceff18d-9039-44b5-a5d3-3d99653f4603"),
-			},
+			name:    "FindingFilteringByTextFieldID",
+			filters: createFilter("id", "5ceff18d-9039-44b5-a5d3-3d99653f4603"),
 			expected: &udatabase.ResourcePage{
 				Total:     1,
 				Limit:     10,
@@ -324,10 +320,8 @@ func TestFindWithValuedFilters(t *testing.T) {
 			considerOrder: true,
 		},
 		{
-			name: "FindingFilteringByMultipleValuesInNumberField",
-			valuedFilters: []uormFilters.ValuedFilter{
-				uormFilters.TextFieldWithValue("name", "Resource1", "Resource2"),
-			},
+			name:    "FindingFilteringByMultipleValuesInNumberField",
+			filters: createFilter("name", "Resource1", "Resource2"),
 			expected: &udatabase.ResourcePage{
 				Total:     2,
 				Limit:     10,
@@ -337,10 +331,8 @@ func TestFindWithValuedFilters(t *testing.T) {
 			considerOrder: false,
 		},
 		{
-			name: "FindingFilteringByMultipleValuesInNumberField",
-			valuedFilters: []uormFilters.ValuedFilter{
-				uormFilters.NumFieldWithValue("random_number", "2", "0"),
-			},
+			name:    "FindingFilteringByMultipleValuesInNumberField",
+			filters: createFilter("random_number", "2", "0"),
 			expected: &udatabase.ResourcePage{
 				Total:     3,
 				Limit:     10,
@@ -350,11 +342,8 @@ func TestFindWithValuedFilters(t *testing.T) {
 			considerOrder: false,
 		},
 		{
-			name: "FindingFilteringBothByNumberAndTextField",
-			valuedFilters: []uormFilters.ValuedFilter{
-				uormFilters.NumFieldWithValue("random_number", "2"),
-				uormFilters.TextFieldWithValue("name", "Resource3"),
-			},
+			name:    "FindingFilteringBothByNumberAndTextField",
+			filters: createFilters(newFilter("random_number", "2"), newFilter("name", "Resource3")),
 			expected: &udatabase.ResourcePage{
 				Total:     1,
 				Limit:     10,
@@ -552,7 +541,6 @@ func createFilter(key string, values ...string) url.Values {
 type findTest struct {
 	name          string
 	filters       url.Values
-	valuedFilters []uormFilters.ValuedFilter
 	expected      *udatabase.ResourcePage
 	considerOrder bool
 }
@@ -592,8 +580,11 @@ func (ft *findTest) testRunWithValuedFilters(r *DBrepository) func(*testing.T) {
 		require.EqualValues(t, len(expectedResources), ft.expected.Total, "Expected Total and Resources doesn't match.")
 
 		// ACT
+		valuedFilters, err := r.ParseFilters(ft.filters)
+		require.NoError(t, err)
+
 		var resources []*Resource
-		rp, err := r.FindWithFilters(context.Background(), &resources, ft.valuedFilters...)
+		rp, err := r.FindWithFilters(context.Background(), &resources, valuedFilters...)
 
 		// ASSERT
 		require.NoError(t, err)
