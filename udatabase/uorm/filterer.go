@@ -5,6 +5,6 @@ import (
 	"net/url"
 )
 
-type Filterer interface {
-	ParseFilters(values url.Values) ([]filters.ValuedFilter, error)
+type Filterer[T any] interface {
+	ParseFilters(values url.Values) ([]filters.ValuedFilter[T], error)
 }

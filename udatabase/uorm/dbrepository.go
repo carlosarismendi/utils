@@ -21,29 +21,29 @@ const transactionName string = "dbtx"
 
 // DBrepository is built on top of GORM to provide easier transaction management as
 // well as methods like Save or Find.
-type DBrepository struct {
+type DBrepository[T any] struct {
 	db      *DBHolder
-	filters map[string]uormFilters.Filter
+	filters map[string]uormFilters.Filter[T]
 }
 
 // NewDBRepository returns a DBrepository.
 // requires a that map will be used in the method Find(context.Context, url.values) to use the filters
 // and sorters provided in the url.values{} parameter. In case the url.values contains a filter
 // that it is not in the filters map, it will return an error.
-func NewDBRepository(dbHolder *DBHolder, filtersMap map[string]uormFilters.Filter) *DBrepository {
+func NewDBRepository[T any](dbHolder *DBHolder, filtersMap map[string]uormFilters.Filter[T]) *DBrepository[T] {
 	if filtersMap == nil {
-		filtersMap = make(map[string]uormFilters.Filter)
+		filtersMap = make(map[string]uormFilters.Filter[T])
 	}
 
 	if _, ok := filtersMap["limit"]; !ok {
-		filtersMap["limit"] = uormFilters.Limit(filters.DefaultLimit)
+		filtersMap["limit"] = uormFilters.Limit[T](filters.DefaultLimit)
 	}
 
 	if _, ok := filtersMap["offset"]; !ok {
-		filtersMap["offset"] = uormFilters.Offset()
+		filtersMap["offset"] = uormFilters.Offset[T]()
 	}
 
-	return &DBrepository{
+	return &DBrepository[T]{
 		db:      dbHolder,
 		filters: filtersMap,
 	}
@@ -51,7 +51,7 @@ func NewDBRepository(dbHolder *DBHolder, filtersMap map[string]uormFilters.Filte
 
 // Begin opens a new transaction.
 // NOTE: Nested transactions not supported.
-func (r *DBrepository) Begin(ctx context.Context) (context.Context, error) {
+func (r *DBrepository[T]) Begin(ctx context.Context) (context.Context, error) {
 	txFromCtx := ctx.Value(transactionName)
 	if txFromCtx != nil {
 		return ctx, nil
@@ -69,7 +69,7 @@ func (r *DBrepository) Begin(ctx context.Context) (context.Context, error) {
 }
 
 // Commit closes and confirms the current transaction.
-func (r *DBrepository) Commit(ctx context.Context) error {
+func (r *DBrepository[T]) Commit(ctx context.Context) error {
 	txFromCtx := ctx.Value(ctxk(transactionName))
 	if txFromCtx == nil {
 		tErr := uerr.NewError(uerr.GenericError, "Missing transaction when doing Commit.")
@@ -80,7 +80,7 @@ func (r *DBrepository) Commit(ctx context.Context) error {
 }
 
 // Rollback cancels the current transaction.
-func (r *DBrepository) Rollback(ctx context.Context) {
+func (r *DBrepository[T]) Rollback(ctx context.Context) {
 	txFromCtx := ctx.Value(ctxk(transactionName))
 	if txFromCtx == nil {
 		return
@@ -91,7 +91,7 @@ func (r *DBrepository) Rollback(ctx context.Context) {
 
 // Save is a combination function. If save value does not contain primary key,
 // it will execute Create, otherwise it will execute Update (with all fields).
-func (r *DBrepository) Save(ctx context.Context, value interface{}) error {
+func (r *DBrepository[T]) Save(ctx context.Context, value T) error {
 	db := r.GetDBInstance(ctx)
 	err := db.Save(value).Error
 
@@ -99,7 +99,7 @@ func (r *DBrepository) Save(ctx context.Context, value interface{}) error {
 }
 
 // Create is a function that creates the resource in the database.
-func (r *DBrepository) Create(ctx context.Context, value interface{}) error {
+func (r *DBrepository[T]) Create(ctx context.Context, value T) error {
 	db := r.GetDBInstance(ctx)
 	err := db.Create(value).Error
 
@@ -112,9 +112,9 @@ func (r *DBrepository) Create(ctx context.Context, value interface{}) error {
 //	type Resource struct {...}
 //	var obj Resource
 //	repository.FindByID(ctx, "an_ID", &obj)
-func (r *DBrepository) FindByID(ctx context.Context, id string, dest interface{}) error {
+func (r *DBrepository[T]) FindByID(ctx context.Context, id string, dst any) error {
 	db := r.GetDBInstance(ctx)
-	err := db.Where("id = ?", id).First(dest).Error
+	err := db.Where("id = ?", id).First(dst).Error
 
 	var tErr error
 	if err != nil {
@@ -133,14 +133,11 @@ func (r *DBrepository) FindByID(ctx context.Context, id string, dest interface{}
 //
 //	type Resource struct {...}
 //	var list []*Resource
-//	repository.FindByID(ctx, url.values{}, list)
+//	repository.Find(ctx, url.values{})
 //
-// It is necessary to pass the list parameter so
-// internally can infer the type and table to use to
-// request the data.
 // resourcePage is of type:
 //
-//	type ResourcePage struct {
+//	type ResourcePage[T any] struct {
 //		   Total  int64 `json:"total"`
 //		   Limit  int64 `json:"limit"`
 //		   Offset int64 `json:"offset"`
@@ -148,7 +145,7 @@ func (r *DBrepository) FindByID(ctx context.Context, id string, dest interface{}
 //	    // Resource will be a pointer to the type passed as
 //	    // dst parameter in Find method. In this example,
 //	    // *[]*Resource.
-//	    Resources interface{} `json:"resources"`
+//	    Resources []T`json:"resources"`
 //	}
 //
 // Filter:
@@ -157,14 +154,14 @@ func (r *DBrepository) FindByID(ctx context.Context, id string, dest interface{}
 //	v.Add("field", "value to use to filter")
 //	v.Add("sort", "field")  // sort in ascending order
 //	v.Add("sort", "-field") // sort in descending order
-func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) (*udatabase.ResourcePage, error) {
+func (r *DBrepository[T]) Find(ctx context.Context, v url.Values) (*udatabase.ResourcePage[T], error) {
 	db := r.GetDBInstance(ctx)
 
 	if v.Get("limit") == "" {
 		v.Add("limit", fmt.Sprintf("%d", filters.DefaultLimit))
 	}
 
-	rp := &udatabase.ResourcePage{}
+	rp := &udatabase.ResourcePage[T]{}
 	for key, values := range v {
 		if len(values) == 0 {
 			continue
@@ -183,7 +180,8 @@ func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) 
 		}
 	}
 
-	result := db.Find(dst)
+	var dst []T
+	result := db.Find(&dst)
 	if result.Error != nil {
 		rErr := uerr.NewError(uerr.GenericError, "Error finding resources.").WithCause(result.Error)
 		return nil, rErr
@@ -194,10 +192,10 @@ func (r *DBrepository) Find(ctx context.Context, v url.Values, dst interface{}) 
 	return rp, nil
 }
 
-func (r *DBrepository) FindWithFilters(ctx context.Context, dst interface{},
-	fs ...uormFilters.ValuedFilter) (*udatabase.ResourcePage, error) {
+func (r *DBrepository[T]) FindWithFilters(ctx context.Context,
+	fs ...uormFilters.ValuedFilter[T]) (*udatabase.ResourcePage[T], error) {
 	db := r.GetDBInstance(ctx)
-	rp := &udatabase.ResourcePage{}
+	rp := &udatabase.ResourcePage[T]{}
 	for _, filter := range fs {
 		var err error
 		db, err = filter(db, rp)
@@ -206,7 +204,8 @@ func (r *DBrepository) FindWithFilters(ctx context.Context, dst interface{},
 		}
 	}
 
-	result := db.Find(dst)
+	var dst []T
+	result := db.Find(&dst)
 	if result.Error != nil {
 		rErr := uerr.NewError(uerr.GenericError, "Error finding resources.").WithCause(result.Error)
 		return nil, rErr
@@ -217,12 +216,12 @@ func (r *DBrepository) FindWithFilters(ctx context.Context, dst interface{},
 	return rp, nil
 }
 
-func (r *DBrepository) ParseFilters(v url.Values) ([]uormFilters.ValuedFilter, error) {
+func (r *DBrepository[T]) ParseFilters(v url.Values) ([]uormFilters.ValuedFilter[T], error) {
 	if v.Get("limit") == "" {
 		v.Add("limit", fmt.Sprintf("%d", filters.DefaultLimit))
 	}
 
-	var fs []uormFilters.ValuedFilter
+	var fs []uormFilters.ValuedFilter[T]
 	for k, values := range v {
 		if len(values) == 0 {
 			continue
@@ -241,13 +240,13 @@ func (r *DBrepository) ParseFilters(v url.Values) ([]uormFilters.ValuedFilter, e
 
 // IsResourceNotFound in case of running custom SELECT queries using *gorm.DB, this method
 // provides an easy way of checking if the error returned is a NotFound or other type.
-func (r *DBrepository) IsResourceNotFound(err error) bool {
+func (r *DBrepository[T]) IsResourceNotFound(err error) bool {
 	return err != nil && errors.Is(err, gorm.ErrRecordNotFound)
 }
 
 // HandleSaveOrUpdateError in case of running an INSERT/UPDATE query, this method provides
 // an easy way of checking if the returned error is nil or if it violates a PRIMARY KEY/UNIQUE constraint.
-func (r *DBrepository) HandleSaveOrUpdateError(err error) error {
+func (r *DBrepository[T]) HandleSaveOrUpdateError(err error) error {
 	if err == nil {
 		return nil
 	}
@@ -271,6 +270,6 @@ func (r *DBrepository) HandleSaveOrUpdateError(err error) error {
 	return uerr.NewError(uerr.GenericError, "Error saving or updating resource.").WithCause(err)
 }
 
-func (r *DBrepository) GetDBInstance(ctx context.Context) *gorm.DB {
+func (r *DBrepository[T]) GetDBInstance(ctx context.Context) *gorm.DB {
 	return r.db.GetDBInstance(ctx)
 }

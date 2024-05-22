@@ -7,30 +7,30 @@ import (
 	"strconv"
 )
 
-type LimitFilter struct {
+type LimitFilter[T any] struct {
 	defaultValue int
 }
 
-func Limit(defaultValue int) *LimitFilter {
+func Limit[T any](defaultValue int) *LimitFilter[T] {
 	if defaultValue < 1 {
 		panic("Limit defaultValue must be greater than 0")
 	}
-	return &LimitFilter{
+	return &LimitFilter[T]{
 		defaultValue: defaultValue,
 	}
 }
 
-func (f *LimitFilter) Apply(db *gorm.DB, values []string, rp *udatabase.ResourcePage) (*gorm.DB, error) {
+func (f *LimitFilter[T]) Apply(db *gorm.DB, values []string, rp *udatabase.ResourcePage[T]) (*gorm.DB, error) {
 	return f.limit(db, rp, values...)
 }
 
-func (f *LimitFilter) ValuedFilterFunc(values ...string) ValuedFilter {
-	return func(db *gorm.DB, rp *udatabase.ResourcePage) (*gorm.DB, error) {
+func (f *LimitFilter[T]) ValuedFilterFunc(values ...string) ValuedFilter[T] {
+	return func(db *gorm.DB, rp *udatabase.ResourcePage[T]) (*gorm.DB, error) {
 		return f.limit(db, rp, values...)
 	}
 }
 
-func (f *LimitFilter) limit(db *gorm.DB, rp *udatabase.ResourcePage, values ...string) (*gorm.DB, error) {
+func (f *LimitFilter[T]) limit(db *gorm.DB, rp *udatabase.ResourcePage[T], values ...string) (*gorm.DB, error) {
 	if len(values) < 1 || values[0] == "" {
 		rp.Limit = int64(f.defaultValue)
 		return db.Limit(f.defaultValue), nil

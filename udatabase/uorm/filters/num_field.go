@@ -6,27 +6,27 @@ import (
 	"gorm.io/gorm"
 )
 
-type NumFieldFilter struct {
+type NumFieldFilter[T any] struct {
 	field string
 }
 
-func NumField(field string) *NumFieldFilter {
-	return &NumFieldFilter{
+func NumField[T any](field string) *NumFieldFilter[T] {
+	return &NumFieldFilter[T]{
 		field: field,
 	}
 }
 
-func (f *NumFieldFilter) Apply(db *gorm.DB, values []string, _ *udatabase.ResourcePage) (*gorm.DB, error) {
+func (f *NumFieldFilter[T]) Apply(db *gorm.DB, values []string, _ *udatabase.ResourcePage[T]) (*gorm.DB, error) {
 	return f.numField(db, values...)
 }
 
-func (f *NumFieldFilter) ValuedFilterFunc(values ...string) ValuedFilter {
-	return func(db *gorm.DB, _ *udatabase.ResourcePage) (*gorm.DB, error) {
+func (f *NumFieldFilter[T]) ValuedFilterFunc(values ...string) ValuedFilter[T] {
+	return func(db *gorm.DB, _ *udatabase.ResourcePage[T]) (*gorm.DB, error) {
 		return f.numField(db, values...)
 	}
 }
 
-func (f *NumFieldFilter) numField(db *gorm.DB, values ...string) (*gorm.DB, error) {
+func (f *NumFieldFilter[T]) numField(db *gorm.DB, values ...string) (*gorm.DB, error) {
 	query, args, err := filters.ApplyNumField(f.field, values...)
 	if err != nil {
 		return nil, err

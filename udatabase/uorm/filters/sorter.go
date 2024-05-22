@@ -6,32 +6,32 @@ import (
 	"gorm.io/gorm"
 )
 
-type SorterFilter struct {
+type SorterFilter[T any] struct {
 	allowedFields map[string]bool
 }
 
-func Sorter(allowedFields ...string) *SorterFilter {
+func Sorter[T any](allowedFields ...string) *SorterFilter[T] {
 	fields := make(map[string]bool)
 	for _, f := range allowedFields {
 		fields[f] = true
 	}
 
-	return &SorterFilter{
+	return &SorterFilter[T]{
 		allowedFields: fields,
 	}
 }
 
-func (f *SorterFilter) Apply(db *gorm.DB, values []string, _ *udatabase.ResourcePage) (*gorm.DB, error) {
+func (f *SorterFilter[T]) Apply(db *gorm.DB, values []string, _ *udatabase.ResourcePage[T]) (*gorm.DB, error) {
 	return f.sorter(db, values...)
 }
 
-func (f *SorterFilter) ValuedFilterFunc(values ...string) ValuedFilter {
-	return func(db *gorm.DB, _ *udatabase.ResourcePage) (*gorm.DB, error) {
+func (f *SorterFilter[T]) ValuedFilterFunc(values ...string) ValuedFilter[T] {
+	return func(db *gorm.DB, _ *udatabase.ResourcePage[T]) (*gorm.DB, error) {
 		return f.sorter(db, values...)
 	}
 }
 
-func (f *SorterFilter) sorter(db *gorm.DB, values ...string) (*gorm.DB, error) {
+func (f *SorterFilter[T]) sorter(db *gorm.DB, values ...string) (*gorm.DB, error) {
 	for _, v := range values {
 		column, direction, err := filters.SortFieldAndDirection(f.allowedFields, v)
 		if err != nil {

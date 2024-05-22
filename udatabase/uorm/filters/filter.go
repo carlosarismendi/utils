@@ -5,9 +5,9 @@ import (
 	"gorm.io/gorm"
 )
 
-type ValuedFilter func(db *gorm.DB, rp *udatabase.ResourcePage) (*gorm.DB, error)
+type ValuedFilter[T any] func(db *gorm.DB, rp *udatabase.ResourcePage[T]) (*gorm.DB, error)
 
-type Filter interface {
-	Apply(db *gorm.DB, values []string, rp *udatabase.ResourcePage) (*gorm.DB, error)
-	ValuedFilterFunc(values ...string) ValuedFilter
+type Filter[T any] interface {
+	Apply(db *gorm.DB, values []string, rp *udatabase.ResourcePage[T]) (*gorm.DB, error)
+	ValuedFilterFunc(values ...string) ValuedFilter[T]
 }

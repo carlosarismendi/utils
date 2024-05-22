@@ -38,16 +38,21 @@ dbHolder.RunMigrations()
 ### DBrepository
 
 ```Go
+type Resource struct {
+    ID     string
+    Name   string
+    Random int
+}
 // This map will be used in the method Find(context.Context, url.values) to use the filters
 // and sorters provided in the url.values parameter. In case the url.values contains a filter
 // that it is not in the filters map, it will return an error.
-filters := map[string]filters.Filter{
-    "id":            filters.TextField("id"),
-    "name":          filters.TextField("name"),
-    "random":        filters.NumField("random"),
-    "sort":          filters.Sorter("name"),
+filters := map[string]filters.Filter[*Resource]{
+    "id":            filters.TextField[*Resource]("id"),
+    "name":          filters.TextField[*Resource]("name"),
+    "random":        filters.NumField[*Resource]("random"),
+    "sort":          filters.Sorter[*Resource]("name"),
 }
-repository := NewDBRepository(dbHolder, filters)
+repository := NewDBRepository[*Resource](dbHolder, filters)
 ```
 
 #### Transactions
@@ -71,12 +76,6 @@ func DoSomething(ctx context.Context) (rErr error) {}
     // finishes with an error or a commit in case there is not error.
     defer EndTx(ctx, repository, &rErr)
     // do stuff
-
-    type Resource struct {
-        ID     string
-        Name   string
-        Random int
-    }
     err = repository.Save(ctx, &Resource{
         ID: "an_ID",
         Name: "Name"
@@ -106,33 +105,34 @@ v.Add("id", "an_ID")
 // internally can infer the type and table to use to
 // request the data.
 // resourcePage is of type:
-// type ResourcePage struct {
+// type ResourcePage[T any] struct {
 //     Total  int64 `json:"total"`
 //     Limit  int64 `json:"limit"`
 //     Offset int64 `json:"offset"`
 //
 //     In this example, *[]*Resource.
-//     Resources interface{} `json:"resources"`
+//     Resources []T `json:"resources"`
 // }
-resourcePage, err = repository.Find(ctx, v, &list)
+// In this example, repository.Find(...) return type is ResourcePage[*Resource].
+resourcePage, err = repository.Find(ctx, v)
 
 // Filtering by name
 v2 := url.values{}
 v2.Add("name", "the name to filter")
-resourcePage, err = repository.Find(ctx, v, &list)
+resourcePage, err = repository.Find(ctx, v)
 
 // Filtering by a number
 v2 := url.values{}
 v2.Add("random", "4")
-resourcePage, err = repository.Find(ctx, v, &list)
+resourcePage, err = repository.Find(ctx, v)
 
 // Sorting by name field in ascending order
 v2 := url.values{}
 v2.Add("sort", "name")
-resourcePage, err = repository.Find(ctx, v, &list)
+resourcePage, err = repository.Find(ctx, v)
 
 // Sorting by name field in descending order
 v2 := url.values{}
 v2.Add("sort", "-name")
-resourcePage, err = repository.Find(ctx, v, &list)
+resourcePage, err = repository.Find(ctx, v)
 ```

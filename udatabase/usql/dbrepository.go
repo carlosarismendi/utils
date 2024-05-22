@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"net/url"
-	"reflect"
 	"strings"
 
 	"github.com/carlosarismendi/utils/udatabase"
@@ -22,7 +21,7 @@ const transactionName string = "dbtx"
 
 // DBrepository is built on top of sqlx to provide easier transaction management as
 // well as methods for error handling.
-type DBrepository struct {
+type DBrepository[T any] struct {
 	db *DBHolder
 
 	filters map[string]usqlFilters.Filter
@@ -33,9 +32,9 @@ type DBrepository struct {
 // requires a that map will be used in the method Find(context.Context, url.values) to use the filters
 // and sorters provided in the url.values{} parameter. In case the url.values contains a filter
 // that it is not in the filters map, it will return an error.
-func NewDBRepository(dbHolder *DBHolder, filtersMap map[string]usqlFilters.Filter,
-	sorters map[string]usqlFilters.Sorter) *DBrepository {
-	return &DBrepository{
+func NewDBRepository[T any](dbHolder *DBHolder, filtersMap map[string]usqlFilters.Filter,
+	sorters map[string]usqlFilters.Sorter) *DBrepository[T] {
+	return &DBrepository[T]{
 		db:      dbHolder,
 		filters: filtersMap,
 		sorters: sorters,
@@ -44,7 +43,7 @@ func NewDBRepository(dbHolder *DBHolder, filtersMap map[string]usqlFilters.Filte
 
 // Begin opens a new transaction.
 // NOTE: Nested transactions not supported.
-func (r *DBrepository) Begin(ctx context.Context) (context.Context, error) {
+func (r *DBrepository[T]) Begin(ctx context.Context) (context.Context, error) {
 	txFromCtx := ctx.Value(transactionName)
 	if txFromCtx != nil {
 		return ctx, nil
@@ -61,7 +60,7 @@ func (r *DBrepository) Begin(ctx context.Context) (context.Context, error) {
 }
 
 // Commit closes and confirms the current transaction.
-func (r *DBrepository) Commit(ctx context.Context) error {
+func (r *DBrepository[T]) Commit(ctx context.Context) error {
 	tx := r.GetTransaction(ctx)
 	if tx == nil {
 		tErr := uerr.NewError(uerr.GenericError, "Missing transaction when doing Commit.")
@@ -71,7 +70,7 @@ func (r *DBrepository) Commit(ctx context.Context) error {
 }
 
 // Rollback cancels the current transaction.
-func (r *DBrepository) Rollback(ctx context.Context) {
+func (r *DBrepository[T]) Rollback(ctx context.Context) {
 	tx := r.GetTransaction(ctx)
 	if tx == nil {
 		return
@@ -81,7 +80,7 @@ func (r *DBrepository) Rollback(ctx context.Context) {
 
 // IsResourceNotFound in case of running SELECT queries using *sqlx.DB/*sqlx.Tx, this method
 // provides an easy way of checking if the error returned is a NotFound or other type.
-func (r *DBrepository) HandleSearchError(err error) error {
+func (r *DBrepository[T]) HandleSearchError(err error) error {
 	if err == nil {
 		return nil
 	}
@@ -95,7 +94,7 @@ func (r *DBrepository) HandleSearchError(err error) error {
 
 // HandleSaveOrUpdateError in case of running an INSERT/UPDATE query, this method provides
 // an easy way of checking if the returned error is nil or if it violates a PRIMARY KEY/UNIQUE constraint.
-func (r *DBrepository) HandleSaveOrUpdateError(res sql.Result, err error) error {
+func (r *DBrepository[T]) HandleSaveOrUpdateError(res sql.Result, err error) error {
 	if err == nil {
 		n, rErr := res.RowsAffected()
 		if rErr != nil {
@@ -118,11 +117,11 @@ func (r *DBrepository) HandleSaveOrUpdateError(res sql.Result, err error) error 
 	return uerr.NewError(uerr.GenericError, "Error saving or updating resource.").WithCause(err)
 }
 
-func (r *DBrepository) GetDBInstance() *sqlx.DB {
+func (r *DBrepository[T]) GetDBInstance() *sqlx.DB {
 	return r.db.GetDBInstance()
 }
 
-func (r *DBrepository) GetTransaction(ctx context.Context) *sqlx.Tx {
+func (r *DBrepository[T]) GetTransaction(ctx context.Context) *sqlx.Tx {
 	txFromCtx := ctx.Value(ctxk(transactionName))
 	if txFromCtx == nil {
 		return nil
@@ -132,44 +131,36 @@ func (r *DBrepository) GetTransaction(ctx context.Context) *sqlx.Tx {
 
 type Querier interface {
 	Rebind(query string) string
-	GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
-	SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+	GetContext(ctx context.Context, dest any, query string, args ...any) error
+	SelectContext(ctx context.Context, dest any, query string, args ...any) error
 }
 
-func (r *DBrepository) GetContext(ctx context.Context, db Querier, dst interface{}, query string, v url.Values) error {
+func (r *DBrepository[T]) GetContext(ctx context.Context, db Querier, dst T, query string, v url.Values) (T, error) {
 	v.Del("limit")
 	v.Add("limit", "1")
 	query, args, _, _, err := r.ApplyFilters(db, query, v)
 	if err != nil {
-		return err
+		return dst, err
 	}
-
 	err = db.GetContext(ctx, dst, query, args...)
-	return r.HandleSearchError(err)
+	return dst, r.HandleSearchError(err)
 }
 
-func (r *DBrepository) SelectContext(ctx context.Context, db Querier, dst interface{}, query string,
-	v url.Values) (rp *udatabase.ResourcePage, err error) {
+func (r *DBrepository[T]) SelectContext(ctx context.Context, db Querier, query string,
+	v url.Values) (rp *udatabase.ResourcePage[T], err error) {
 	query, args, limit, offset, err := r.ApplyFilters(db, query, v)
 	if err != nil {
 		return nil, err
 	}
 
-	err = db.SelectContext(ctx, dst, query, args...)
+	var dst []T
+	err = db.SelectContext(ctx, &dst, query, args...)
 	if err != nil {
 		return nil, r.HandleSearchError(err)
 	}
 
-	exp := reflect.ValueOf(dst).Elem()
-	if exp.Kind() == reflect.Ptr || exp.Kind() == reflect.Interface && !exp.IsNil() {
-		exp = exp.Elem()
-	}
-	if exp.Kind() != reflect.Slice {
-		return nil, uerr.NewError(uerr.WrongInputParameterError, `"dst" parameter must be a slice.`)
-	}
-
-	rp = &udatabase.ResourcePage{
-		Total:     int64(exp.Len()),
+	rp = &udatabase.ResourcePage[T]{
+		Total:     int64(len(dst)),
 		Limit:     limit,
 		Offset:    offset,
 		Resources: dst,
@@ -178,7 +169,7 @@ func (r *DBrepository) SelectContext(ctx context.Context, db Querier, dst interf
 	return rp, nil
 }
 
-func (r *DBrepository) ApplyFilters(db Querier, query string, v url.Values) (queryResult string, args []interface{},
+func (r *DBrepository[T]) ApplyFilters(db Querier, query string, v url.Values) (queryResult string, args []any,
 	limit, offset int64, err error) {
 	limitQ, limit, err := r.applyLimit(v)
 	if err != nil {
@@ -217,9 +208,9 @@ func (r *DBrepository) ApplyFilters(db Querier, query string, v url.Values) (que
 	return query, args, limit, offset, nil
 }
 
-func (r *DBrepository) applyFilters(v url.Values) (conds string, args []interface{}, unknown []string,
+func (r *DBrepository[T]) applyFilters(v url.Values) (conds string, args []any, unknown []string,
 	err error) {
-	args = make([]interface{}, 0, len(v))
+	args = make([]any, 0, len(v))
 	var sbConds, sbSorts strings.Builder
 	var cSep, sSep string
 	for key, values := range v {
@@ -274,7 +265,7 @@ func (r *DBrepository) applyFilters(v url.Values) (conds string, args []interfac
 	return sb.String(), args, unknown, nil
 }
 
-func (r *DBrepository) applyLimit(v url.Values) (limitQ string, limitNum int64, rErr error) {
+func (r *DBrepository[T]) applyLimit(v url.Values) (limitQ string, limitNum int64, rErr error) {
 	values, ok := v["limit"]
 	var limit string
 	if ok {
@@ -287,7 +278,7 @@ func (r *DBrepository) applyLimit(v url.Values) (limitQ string, limitNum int64, 
 	return filters.ApplyLimit("", limit)
 }
 
-func (r *DBrepository) applyOffset(v url.Values) (offsetQ string, offsetNum int64, rErr error) {
+func (r *DBrepository[T]) applyOffset(v url.Values) (offsetQ string, offsetNum int64, rErr error) {
 	values, ok := v["offset"]
 	var offset string
 	if !ok {
@@ -299,7 +290,7 @@ func (r *DBrepository) applyOffset(v url.Values) (offsetQ string, offsetNum int6
 	return filters.ApplyOffset("", offset)
 }
 
-func (r *DBrepository) processUnknownFilters(unknown []string) error {
+func (r *DBrepository[T]) processUnknownFilters(unknown []string) error {
 	if len(unknown) == 0 {
 		return nil
 	}

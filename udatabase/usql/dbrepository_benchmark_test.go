@@ -84,7 +84,7 @@ func BenchmarkApplyFilters(b *testing.B) {
 		"sort": usqlFilters.Sort("name", "random_number"),
 	}
 
-	var r = NewDBRepository(dbHolder.DBHolder, filtersMap, sortersMap)
+	var r = NewDBRepository[*Resource](dbHolder.DBHolder, filtersMap, sortersMap)
 	var db = r.GetDBInstance()
 
 	var v url.Values

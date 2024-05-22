@@ -7,24 +7,24 @@ import (
 	"strconv"
 )
 
-type OffsetFilter struct {
+type OffsetFilter[T any] struct {
 }
 
-func Offset() *OffsetFilter {
-	return &OffsetFilter{}
+func Offset[T any]() *OffsetFilter[T] {
+	return &OffsetFilter[T]{}
 }
 
-func (f *OffsetFilter) Apply(db *gorm.DB, values []string, rp *udatabase.ResourcePage) (*gorm.DB, error) {
-	return offset(db, rp, values...)
+func (f *OffsetFilter[T]) Apply(db *gorm.DB, values []string, rp *udatabase.ResourcePage[T]) (*gorm.DB, error) {
+	return f.offset(db, rp, values...)
 }
 
-func (f *OffsetFilter) ValuedFilterFunc(values ...string) ValuedFilter {
-	return func(db *gorm.DB, rp *udatabase.ResourcePage) (*gorm.DB, error) {
-		return offset(db, rp, values...)
+func (f *OffsetFilter[T]) ValuedFilterFunc(values ...string) ValuedFilter[T] {
+	return func(db *gorm.DB, rp *udatabase.ResourcePage[T]) (*gorm.DB, error) {
+		return f.offset(db, rp, values...)
 	}
 }
 
-func offset(db *gorm.DB, rp *udatabase.ResourcePage, values ...string) (*gorm.DB, error) {
+func (f *OffsetFilter[T]) offset(db *gorm.DB, rp *udatabase.ResourcePage[T], values ...string) (*gorm.DB, error) {
 	if len(values) == 0 || values[0] == "" {
 		return db, nil
 	}

@@ -1,6 +1,8 @@
 package udatabase
 
-import "context"
+import (
+	"context"
+)
 
 type Transactional interface {
 	Begin(ctx context.Context) (context.Context, error)

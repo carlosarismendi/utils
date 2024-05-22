@@ -18,7 +18,7 @@ type Resource struct {
 	RandomNumber int
 }
 
-func createResourceTable(t testing.TB, r *DBrepository) {
+func createResourceTable(t testing.TB, r *DBrepository[*Resource]) {
 	err := r.GetDBInstance(context.Background()).
 		Exec("CREATE TABLE resources (id UUID PRIMARY KEY, name TEXT, random_number INTEGER);").Error
 	require.NoError(t, err)
@@ -26,7 +26,7 @@ func createResourceTable(t testing.TB, r *DBrepository) {
 
 func TestTransactions(t *testing.T) {
 	dbHolder := NewTestDBHolder("db_orm_repository_test_transactions")
-	r := NewDBRepository(dbHolder.DBHolder, nil)
+	r := NewDBRepository[*Resource](dbHolder.DBHolder, nil)
 
 	t.Run("savingResourceWithoutError_commitsTransaction", func(t *testing.T) {
 		// ARRANGE
@@ -136,7 +136,7 @@ func TestTransactions(t *testing.T) {
 
 func TestSave(t *testing.T) {
 	dbHolder := NewTestDBHolder("db_orm_repository_test_save")
-	r := NewDBRepository(dbHolder.DBHolder, nil)
+	r := NewDBRepository[*Resource](dbHolder.DBHolder, nil)
 
 	t.Run("SavingValidResource", func(t *testing.T) {
 		// ARRANGE
@@ -183,14 +183,14 @@ func TestFindWithFilters(t *testing.T) {
 	dbHolder := NewTestDBHolder("db_orm_repository_test_find")
 	dbHolder.Reset()
 
-	filtersMap := map[string]uormFilters.Filter{
-		"id":            uormFilters.TextField("id"),
-		"name":          uormFilters.TextField("name"),
-		"random_number": uormFilters.NumField("random_number"),
-		"sort":          uormFilters.Sorter("name", "random_number"),
+	filtersMap := map[string]uormFilters.Filter[*Resource]{
+		"id":            uormFilters.TextField[*Resource]("id"),
+		"name":          uormFilters.TextField[*Resource]("name"),
+		"random_number": uormFilters.NumField[*Resource]("random_number"),
+		"sort":          uormFilters.Sorter[*Resource]("name", "random_number"),
 	}
 
-	r := NewDBRepository(dbHolder.DBHolder, filtersMap)
+	r := NewDBRepository[*Resource](dbHolder.DBHolder, filtersMap)
 	createResourceTable(t, r)
 
 	r1, r2, r3, r4 := populateDB(context.Background(), t, r)
@@ -199,7 +199,7 @@ func TestFindWithFilters(t *testing.T) {
 		{
 			name:    "FindingWithoutFilters",
 			filters: url.Values{},
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -210,7 +210,7 @@ func TestFindWithFilters(t *testing.T) {
 		{
 			name:    "FindingFilteringByTextFieldName",
 			filters: createFilter("name", "Resource1"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Limit:     10,
 				Offset:    0,
@@ -221,7 +221,7 @@ func TestFindWithFilters(t *testing.T) {
 		{
 			name:    "FindingFilteringByTextFieldID",
 			filters: createFilter("id", "5ceff18d-9039-44b5-a5d3-3d99653f4603"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Limit:     10,
 				Offset:    0,
@@ -232,7 +232,7 @@ func TestFindWithFilters(t *testing.T) {
 		{
 			name:    "FindingFilteringByMultipleValuesInNumberField",
 			filters: createFilter("name", "Resource1", "Resource2"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     2,
 				Limit:     10,
 				Offset:    0,
@@ -243,7 +243,7 @@ func TestFindWithFilters(t *testing.T) {
 		{
 			name:    "FindingFilteringByMultipleValuesInNumberField",
 			filters: createFilter("random_number", "2", "0"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     3,
 				Limit:     10,
 				Offset:    0,
@@ -254,7 +254,7 @@ func TestFindWithFilters(t *testing.T) {
 		{
 			name:    "FindingFilteringBothByNumberAndTextField",
 			filters: createFilters(newFilter("random_number", "2"), newFilter("name", "Resource3")),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Limit:     10,
 				Offset:    0,
@@ -273,14 +273,14 @@ func TestFindWithValuedFilters(t *testing.T) {
 	dbHolder := NewTestDBHolder("db_orm_repository_test_find")
 	dbHolder.Reset()
 
-	filtersMap := map[string]uormFilters.Filter{
-		"id":            uormFilters.TextField("id"),
-		"name":          uormFilters.TextField("name"),
-		"random_number": uormFilters.NumField("random_number"),
-		"sort":          uormFilters.Sorter("name", "random_number"),
+	filtersMap := map[string]uormFilters.Filter[*Resource]{
+		"id":            uormFilters.TextField[*Resource]("id"),
+		"name":          uormFilters.TextField[*Resource]("name"),
+		"random_number": uormFilters.NumField[*Resource]("random_number"),
+		"sort":          uormFilters.Sorter[*Resource]("name", "random_number"),
 	}
 
-	r := NewDBRepository(dbHolder.DBHolder, filtersMap)
+	r := NewDBRepository[*Resource](dbHolder.DBHolder, filtersMap)
 	createResourceTable(t, r)
 
 	r1, r2, r3, r4 := populateDB(context.Background(), t, r)
@@ -289,7 +289,7 @@ func TestFindWithValuedFilters(t *testing.T) {
 		{
 			name:    "FindingWithoutFilters",
 			filters: url.Values{},
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -300,7 +300,7 @@ func TestFindWithValuedFilters(t *testing.T) {
 		{
 			name:    "FindingFilteringByTextFieldName",
 			filters: createFilter("name", "Resource1"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Limit:     10,
 				Offset:    0,
@@ -311,7 +311,7 @@ func TestFindWithValuedFilters(t *testing.T) {
 		{
 			name:    "FindingFilteringByTextFieldID",
 			filters: createFilter("id", "5ceff18d-9039-44b5-a5d3-3d99653f4603"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Limit:     10,
 				Offset:    0,
@@ -322,7 +322,7 @@ func TestFindWithValuedFilters(t *testing.T) {
 		{
 			name:    "FindingFilteringByMultipleValuesInNumberField",
 			filters: createFilter("name", "Resource1", "Resource2"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     2,
 				Limit:     10,
 				Offset:    0,
@@ -333,7 +333,7 @@ func TestFindWithValuedFilters(t *testing.T) {
 		{
 			name:    "FindingFilteringByMultipleValuesInNumberField",
 			filters: createFilter("random_number", "2", "0"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     3,
 				Limit:     10,
 				Offset:    0,
@@ -344,7 +344,7 @@ func TestFindWithValuedFilters(t *testing.T) {
 		{
 			name:    "FindingFilteringBothByNumberAndTextField",
 			filters: createFilters(newFilter("random_number", "2"), newFilter("name", "Resource3")),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Limit:     10,
 				Offset:    0,
@@ -363,14 +363,14 @@ func TestFindWithSorters(t *testing.T) {
 	dbHolder := NewTestDBHolder("db_orm_repository_test_find")
 	dbHolder.Reset()
 
-	filtersMap := map[string]uormFilters.Filter{
-		"id":            uormFilters.TextField("id"),
-		"name":          uormFilters.TextField("name"),
-		"random_number": uormFilters.NumField("random_number"),
-		"sort":          uormFilters.Sorter("name", "random_number"),
+	filtersMap := map[string]uormFilters.Filter[*Resource]{
+		"id":            uormFilters.TextField[*Resource]("id"),
+		"name":          uormFilters.TextField[*Resource]("name"),
+		"random_number": uormFilters.NumField[*Resource]("random_number"),
+		"sort":          uormFilters.Sorter[*Resource]("name", "random_number"),
 	}
 
-	r := NewDBRepository(dbHolder.DBHolder, filtersMap)
+	r := NewDBRepository[*Resource](dbHolder.DBHolder, filtersMap)
 	createResourceTable(t, r)
 
 	r1, r2, r3, r4 := populateDB(context.Background(), t, r)
@@ -379,7 +379,7 @@ func TestFindWithSorters(t *testing.T) {
 		{
 			name:    "FindingSortingByTextFieldNameAsc",
 			filters: createFilter("sort", "name"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -390,7 +390,7 @@ func TestFindWithSorters(t *testing.T) {
 		{
 			name:    "FindingSortingByTextFieldNameDesc",
 			filters: createFilter("sort", "-name"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -401,7 +401,7 @@ func TestFindWithSorters(t *testing.T) {
 		{
 			name:    "FindingSortingByFieldRandomNumberAsc",
 			filters: createFilter("sort", "random_number"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -412,7 +412,7 @@ func TestFindWithSorters(t *testing.T) {
 		{
 			name:    "FindingSortingByNumFieldRandomNumberDesc",
 			filters: createFilter("sort", "-random_number"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -426,7 +426,7 @@ func TestFindWithSorters(t *testing.T) {
 				newFilter("sort", "-random_number"),
 				newFilter("limit", "2"),
 			),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     2,
 				Limit:     2,
 				Offset:    0,
@@ -440,7 +440,7 @@ func TestFindWithSorters(t *testing.T) {
 				newFilter("sort", "-random_number"),
 				newFilter("offset", "2"),
 			),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     2,
 				Limit:     10,
 				Offset:    2,
@@ -451,7 +451,7 @@ func TestFindWithSorters(t *testing.T) {
 		{
 			name:    "FindingSortingByNameAscAndRandomNumberAsc",
 			filters: createFilter("sort", "name", "random_number"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -462,7 +462,7 @@ func TestFindWithSorters(t *testing.T) {
 		{
 			name:    "FindingSortingByNameAscAndRandomNumberDesc",
 			filters: createFilter("sort", "name", "-random_number"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -477,7 +477,7 @@ func TestFindWithSorters(t *testing.T) {
 	}
 }
 
-func populateDB(ctx context.Context, t testing.TB, r *DBrepository) (r1, r2, r3, r4 *Resource) {
+func populateDB(ctx context.Context, t testing.TB, r *DBrepository[*Resource]) (r1, r2, r3, r4 *Resource) {
 	r1 = &Resource{
 		ID:           "5ceff18d-9039-44b5-a5d3-3d99653f4601",
 		Name:         "Resource1",
@@ -541,64 +541,60 @@ func createFilter(key string, values ...string) url.Values {
 type findTest struct {
 	name          string
 	filters       url.Values
-	expected      *udatabase.ResourcePage
+	expected      *udatabase.ResourcePage[*Resource]
 	considerOrder bool
 }
 
-func (ft *findTest) testRun(r *DBrepository) func(*testing.T) {
+func (ft *findTest) testRun(r *DBrepository[*Resource]) func(*testing.T) {
 	return func(t *testing.T) {
 		// ARRANGE
-		expectedResources := ft.expected.Resources.([]*Resource)
+		expectedResources := ft.expected.Resources
 		require.EqualValues(t, len(expectedResources), ft.expected.Total, "Expected Total and Resources doesn't match.")
 
 		// ACT
-		var resources []*Resource
-		rp, err := r.Find(context.Background(), ft.filters, &resources)
+		rp, err := r.Find(context.Background(), ft.filters)
 
 		// ASSERT
 		require.NoError(t, err)
-		require.EqualValues(t, ft.expected.Total, len(resources))
 		require.EqualValues(t, ft.expected.Total, rp.Total)
-		require.EqualValues(t, ft.expected.Total, len(*rp.Resources.(*[]*Resource)))
+		require.EqualValues(t, ft.expected.Total, len(rp.Resources))
 		require.EqualValues(t, ft.expected.Offset, rp.Offset)
 		require.EqualValues(t, ft.expected.Limit, rp.Limit)
 
 		if ft.considerOrder {
-			require.Equal(t, expectedResources, resources)
+			require.Equal(t, expectedResources, rp.Resources)
 		} else {
 			for _, expRes := range expectedResources {
-				require.Contains(t, resources, expRes)
+				require.Contains(t, rp.Resources, expRes)
 			}
 		}
 	}
 }
 
-func (ft *findTest) testRunWithValuedFilters(r *DBrepository) func(*testing.T) {
+func (ft *findTest) testRunWithValuedFilters(r *DBrepository[*Resource]) func(*testing.T) {
 	return func(t *testing.T) {
 		// ARRANGE
-		expectedResources := ft.expected.Resources.([]*Resource)
+		expectedResources := ft.expected.Resources
 		require.EqualValues(t, len(expectedResources), ft.expected.Total, "Expected Total and Resources doesn't match.")
 
 		// ACT
 		valuedFilters, err := r.ParseFilters(ft.filters)
 		require.NoError(t, err)
 
-		var resources []*Resource
-		rp, err := r.FindWithFilters(context.Background(), &resources, valuedFilters...)
+		rp, err := r.FindWithFilters(context.Background(), valuedFilters...)
 
 		// ASSERT
 		require.NoError(t, err)
-		require.EqualValues(t, ft.expected.Total, len(resources))
 		require.EqualValues(t, ft.expected.Total, rp.Total)
-		require.EqualValues(t, ft.expected.Total, len(*rp.Resources.(*[]*Resource)))
+		require.EqualValues(t, ft.expected.Total, len(rp.Resources))
 		require.EqualValues(t, ft.expected.Offset, rp.Offset)
 		require.EqualValues(t, ft.expected.Limit, rp.Limit)
 
 		if ft.considerOrder {
-			require.Equal(t, expectedResources, resources)
+			require.Equal(t, expectedResources, rp.Resources)
 		} else {
 			for _, expRes := range expectedResources {
-				require.Contains(t, resources, expRes)
+				require.Contains(t, rp.Resources, expRes)
 			}
 		}
 	}

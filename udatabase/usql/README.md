@@ -38,6 +38,11 @@ dbHolder.RunMigrations()
 ### DBrepository
 
 ```Go
+type Resource struct {
+    ID     string
+    Name   string
+    Random int
+}
 // This map will be used in the method Find(context.Context, url.values) to use the filters
 // and sorters provided in the url.values parameter. In case the url.values contains a filter
 // that it is not in the filters map, it will return an error.
@@ -51,7 +56,7 @@ sortersMap := map[string]usqlFilters.Sorter{
     "sort": usqlFilters.Sort("name", "random"),
 }
 
-r := NewDBRepository(dbHolder, filtersMap, sortersMap)
+r := NewDBRepository[*Resource](dbHolder, filtersMap, sortersMap)
 ```
 
 #### Transactions
@@ -75,15 +80,10 @@ func DoSomething(ctx context.Context) (rErr error) {}
     // finishes with an error or a commit in case there is not error.
     defer EndTx(ctx, repository, &rErr)
     // do stuff
-
-    type Resource struct {
-        ID     string
-        Name   string
-        Random int
-    }
+	
     res := Resource{}
     // It's important to use the GetTransaction method instead of GetDBInstance if we want the following operations to be part of the transaction.
-    tx := repository.GetTransaction()
+    tx := repository.GetTransaction(ctx)
     err = tx.NamedExecContext(ctx,
         "INSERT INTO resources (id, name, random) VALUES (:id, :name, :random);",
         &res,
@@ -110,35 +110,36 @@ err := repository.GetContext(ctx, dbInstance, &obj, query, url.Values{})
 // Filtering by id
 v := url.values{}
 v.Add("id", "an_ID")
-// type ResourcePage struct {
+// type ResourcePage[T any] struct {
 //     Total  int64 `json:"total"`
 //     Limit  int64 `json:"limit"`
 //     Offset int64 `json:"offset"`
 //
 //     In this example, *[]*Resource.
-//     Resources interface{} `json:"resources"`
+//     Resources []T `json:"resources"`
 // }
-resourcePage, err := repository.SelectContext(ctx, dbInstance, &list, query, url.Values{})
+// In this example, repository.SelectContext return type is ResourePage[*Resource].
+resourcePage, err := repository.SelectContext(ctx, dbInstance, query, url.Values{})
 
 // Filtering by name
 v = url.values{}
 v.Add("name", "the name to filter")
-resourcePage, err = repository.SelectContext(ctx, dbInstance, &list, query, v)
+resourcePage, err = repository.SelectContext(ctx, dbInstance, query, v)
 
 // Filtering by a number
 v = url.values{}
 v.Add("random", "4")
-resourcePage, err = repository.SelectContext(ctx, dbInstance, &list, query, v)
+resourcePage, err = repository.SelectContext(ctx, dbInstance, query, v)
 
 // Sorting by name field in ascending order
 v = url.values{}
 v.Add("sort", "name")
-resourcePage, err = repository.SelectContext(ctx, dbInstance, &list, query, v)
+resourcePage, err = repository.SelectContext(ctx, dbInstance, query, v)
 
 // Sorting by name field in descending order
 v = url.values{}
 v.Add("sort", "-name")
-resourcePage, err = repository.SelectContext(ctx, dbInstance, &list, query, v)
+resourcePage, err = repository.SelectContext(ctx, dbInstance, query, v)
 ```
 
 #### Build SQL

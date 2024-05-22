@@ -20,7 +20,7 @@ type Resource struct {
 	RandomNumber int
 }
 
-func createResourceTable(t testing.TB, r *DBrepository) {
+func createResourceTable(t testing.TB, r *DBrepository[*Resource]) {
 	_, err := r.GetDBInstance().
 		Exec("CREATE TABLE resources (id UUID PRIMARY KEY, name TEXT, random_number INTEGER);")
 	require.NoError(t, err)
@@ -28,7 +28,7 @@ func createResourceTable(t testing.TB, r *DBrepository) {
 
 func TestTransactions(t *testing.T) {
 	dbHolder := NewTestDBHolder("db_sql_repository_test_transactions")
-	r := NewDBRepository(dbHolder.DBHolder, nil, nil)
+	r := NewDBRepository[*Resource](dbHolder.DBHolder, nil, nil)
 
 	t.Run("savingResourceWithoutError_commitsTransaction", func(t *testing.T) {
 		// ARRANGE
@@ -140,7 +140,7 @@ func TestTransactions(t *testing.T) {
 
 func TestInsertErrors(t *testing.T) {
 	dbHolder := NewTestDBHolder("db_sql_repository_test_insert_errors")
-	r := NewDBRepository(dbHolder.DBHolder, nil, nil)
+	r := NewDBRepository[*Resource](dbHolder.DBHolder, nil, nil)
 
 	t.Run("Inserting two elements with same value for primary key", func(t *testing.T) {
 		// ARRANGE
@@ -181,7 +181,7 @@ func TestFindList(t *testing.T) {
 	dbHolder := NewTestDBHolder("db_sql_repository_test_find")
 	dbHolder.Reset()
 
-	r := NewDBRepository(dbHolder.DBHolder, nil, nil)
+	r := NewDBRepository[*Resource](dbHolder.DBHolder, nil, nil)
 	createResourceTable(t, r)
 
 	ctx := context.Background()
@@ -253,7 +253,7 @@ func TestSelectContextWithFilters(t *testing.T) {
 		"sort": usqlFilters.Sort("name", "random_number"),
 	}
 
-	r := NewDBRepository(dbHolder.DBHolder, filtersMap, sortersMap)
+	r := NewDBRepository[*Resource](dbHolder.DBHolder, filtersMap, sortersMap)
 	createResourceTable(t, r)
 
 	r1, r2, r3, r4 := populateDB(context.Background(), t, r)
@@ -262,7 +262,7 @@ func TestSelectContextWithFilters(t *testing.T) {
 		{
 			name:    "SelectContextWithoutFilters",
 			filters: url.Values{},
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -273,7 +273,7 @@ func TestSelectContextWithFilters(t *testing.T) {
 		{
 			name:    "SelectContextFilteringByTextFieldName",
 			filters: createFilter("name", "Resource1"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Limit:     10,
 				Offset:    0,
@@ -284,7 +284,7 @@ func TestSelectContextWithFilters(t *testing.T) {
 		{
 			name:    "SelectContextFilteringByTextFieldID",
 			filters: createFilter("id", "5ceff18d-9039-44b5-a5d3-3d99653f4603"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Limit:     10,
 				Offset:    0,
@@ -295,7 +295,7 @@ func TestSelectContextWithFilters(t *testing.T) {
 		{
 			name:    "SelectContextFilteringByMultipleValuesInNumberField",
 			filters: createFilter("name", "Resource1", "Resource2"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     2,
 				Limit:     10,
 				Offset:    0,
@@ -306,7 +306,7 @@ func TestSelectContextWithFilters(t *testing.T) {
 		{
 			name:    "SelectContextFilteringByMultipleValuesInNumberField",
 			filters: createFilter("random_number", "2", "0"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     3,
 				Limit:     10,
 				Offset:    0,
@@ -317,7 +317,7 @@ func TestSelectContextWithFilters(t *testing.T) {
 		{
 			name:    "SelectContextFilteringBothByNumberAndTextField",
 			filters: createFilters(newFilter("random_number", "2"), newFilter("name", "Resource3")),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Limit:     10,
 				Offset:    0,
@@ -346,7 +346,7 @@ func TestSelectContextWithSorters(t *testing.T) {
 		"sort": usqlFilters.Sort("name", "random_number"),
 	}
 
-	r := NewDBRepository(dbHolder.DBHolder, filtersMap, sortersMap)
+	r := NewDBRepository[*Resource](dbHolder.DBHolder, filtersMap, sortersMap)
 	createResourceTable(t, r)
 
 	r1, r2, r3, r4 := populateDB(context.Background(), t, r)
@@ -355,7 +355,7 @@ func TestSelectContextWithSorters(t *testing.T) {
 		{
 			name:    "SelectContextSortingByTextFieldNameAsc",
 			filters: createFilter("sort", "name"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -366,7 +366,7 @@ func TestSelectContextWithSorters(t *testing.T) {
 		{
 			name:    "SelectContextSortingByTextFieldNameDesc",
 			filters: createFilter("sort", "-name"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -377,7 +377,7 @@ func TestSelectContextWithSorters(t *testing.T) {
 		{
 			name:    "SelectContextSortingByFieldRandomNumberAsc",
 			filters: createFilter("sort", "random_number"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -388,7 +388,7 @@ func TestSelectContextWithSorters(t *testing.T) {
 		{
 			name:    "SelectContextSortingByNumFieldRandomNumberDesc",
 			filters: createFilter("sort", "-random_number"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -402,7 +402,7 @@ func TestSelectContextWithSorters(t *testing.T) {
 				newFilter("sort", "-random_number"),
 				newFilter("limit", "2"),
 			),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     2,
 				Limit:     2,
 				Offset:    0,
@@ -416,7 +416,7 @@ func TestSelectContextWithSorters(t *testing.T) {
 				newFilter("sort", "-random_number"),
 				newFilter("offset", "2"),
 			),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     2,
 				Limit:     10,
 				Offset:    2,
@@ -427,7 +427,7 @@ func TestSelectContextWithSorters(t *testing.T) {
 		{
 			name:    "SelectContextSortingByNameAscAndRandomNumberAsc",
 			filters: createFilter("sort", "name", "random_number"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -438,7 +438,7 @@ func TestSelectContextWithSorters(t *testing.T) {
 		{
 			name:    "SelectContextSortingByNameAscAndRandomNumberDesc",
 			filters: createFilter("sort", "name", "-random_number"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     4,
 				Limit:     10,
 				Offset:    0,
@@ -467,7 +467,7 @@ func TestGetContext(t *testing.T) {
 		"sort": usqlFilters.Sort("name", "random_number"),
 	}
 
-	r := NewDBRepository(dbHolder.DBHolder, filtersMap, sortersMap)
+	r := NewDBRepository[*Resource](dbHolder.DBHolder, filtersMap, sortersMap)
 	createResourceTable(t, r)
 
 	r1, r2, r3, r4 := populateDB(context.Background(), t, r)
@@ -476,7 +476,7 @@ func TestGetContext(t *testing.T) {
 		{
 			name:    "GetContextWithoutFilters",
 			filters: url.Values{},
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Resources: []*Resource{r1},
 			},
@@ -484,7 +484,7 @@ func TestGetContext(t *testing.T) {
 		{
 			name:    "GetContextFilteringByTextFieldName",
 			filters: createFilter("name", "Resource1"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Resources: []*Resource{r1},
 			},
@@ -492,7 +492,7 @@ func TestGetContext(t *testing.T) {
 		{
 			name:    "GetContextFilteringByTextFieldID",
 			filters: createFilter("id", "5ceff18d-9039-44b5-a5d3-3d99653f4603"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Resources: []*Resource{r3},
 			},
@@ -500,7 +500,7 @@ func TestGetContext(t *testing.T) {
 		{
 			name:    "GetContextFilteringByMultipleValuesInNumberField",
 			filters: createFilter("name", "Resource1", "Resource2"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Resources: []*Resource{r1},
 			},
@@ -508,7 +508,7 @@ func TestGetContext(t *testing.T) {
 		{
 			name:    "GetContextFilteringByMultipleValuesInNumberField",
 			filters: createFilter("random_number", "2", "0"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Resources: []*Resource{r2},
 			},
@@ -516,7 +516,7 @@ func TestGetContext(t *testing.T) {
 		{
 			name:    "GetContextFilteringBothByNumberAndTextField",
 			filters: createFilters(newFilter("random_number", "2"), newFilter("name", "Resource3")),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Limit:     10,
 				Offset:    0,
@@ -526,7 +526,7 @@ func TestGetContext(t *testing.T) {
 		{
 			name:    "GetContextSortingByTextFieldNameAsc",
 			filters: createFilter("sort", "name"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Resources: []*Resource{r1},
 			},
@@ -534,7 +534,7 @@ func TestGetContext(t *testing.T) {
 		{
 			name:    "GetContextSortingByTextFieldNameDesc",
 			filters: createFilter("sort", "-name"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Resources: []*Resource{r3},
 			},
@@ -542,7 +542,7 @@ func TestGetContext(t *testing.T) {
 		{
 			name:    "GetContextSortingByFieldRandomNumberAsc",
 			filters: createFilter("sort", "random_number"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Resources: []*Resource{r4},
 			},
@@ -550,7 +550,7 @@ func TestGetContext(t *testing.T) {
 		{
 			name:    "GetContextSortingByNumFieldRandomNumberDesc",
 			filters: createFilter("sort", "-random_number"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Resources: []*Resource{r2},
 			},
@@ -561,7 +561,7 @@ func TestGetContext(t *testing.T) {
 				newFilter("sort", "-random_number"),
 				newFilter("limit", "2"),
 			),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Resources: []*Resource{r2},
 			},
@@ -572,7 +572,7 @@ func TestGetContext(t *testing.T) {
 				newFilter("sort", "-random_number"),
 				newFilter("offset", "2"),
 			),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Resources: []*Resource{r1},
 			},
@@ -580,7 +580,7 @@ func TestGetContext(t *testing.T) {
 		{
 			name:    "GetContextSortingByNameAscAndRandomNumberAsc",
 			filters: createFilter("sort", "name", "random_number"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Resources: []*Resource{r1},
 			},
@@ -588,7 +588,7 @@ func TestGetContext(t *testing.T) {
 		{
 			name:    "GetContextSortingByNameAscAndRandomNumberDesc",
 			filters: createFilter("sort", "name", "-random_number"),
-			expected: &udatabase.ResourcePage{
+			expected: &udatabase.ResourcePage[*Resource]{
 				Total:     1,
 				Resources: []*Resource{r1},
 			},
@@ -600,7 +600,7 @@ func TestGetContext(t *testing.T) {
 	}
 }
 
-func populateDB(ctx context.Context, t testing.TB, r *DBrepository) (r1, r2, r3, r4 *Resource) {
+func populateDB(ctx context.Context, t testing.TB, r *DBrepository[*Resource]) (r1, r2, r3, r4 *Resource) {
 	ctx, err := r.Begin(ctx)
 	require.NoError(t, err)
 	defer r.Rollback(ctx)
@@ -670,71 +670,68 @@ func createFilter(key string, values ...string) url.Values {
 type findTest struct {
 	name          string
 	filters       url.Values
-	expected      *udatabase.ResourcePage
+	expected      *udatabase.ResourcePage[*Resource]
 	considerOrder bool
 }
 
-func (ft *findTest) testSelectContext(r *DBrepository) func(*testing.T) {
+func (ft *findTest) testSelectContext(r *DBrepository[*Resource]) func(*testing.T) {
 	return func(t *testing.T) {
 		// ARRANGE
-		expectedResources := ft.expected.Resources.([]*Resource)
+		expectedResources := ft.expected.Resources
 		require.EqualValues(t, len(expectedResources), ft.expected.Total, "Expected Total and Resources doesn't match.")
 
 		// ACT
 		query := "SELECT id, name, random_number as RandomNumber FROM resources"
-		var resources []*Resource
-
-		rp, err := r.SelectContext(context.Background(), r.GetDBInstance(), &resources, query, ft.filters)
+		rp, err := r.SelectContext(context.Background(), r.GetDBInstance(), query, ft.filters)
 
 		// ASSERT
 		require.NoError(t, err)
-		require.EqualValues(t, ft.expected.Total, len(resources))
 		require.EqualValues(t, ft.expected.Total, rp.Total)
-		require.EqualValues(t, ft.expected.Total, len(*rp.Resources.(*[]*Resource)))
+		require.EqualValues(t, ft.expected.Total, len(rp.Resources))
 		require.EqualValues(t, ft.expected.Offset, rp.Offset)
 		require.EqualValues(t, ft.expected.Limit, rp.Limit)
 
 		if ft.considerOrder {
-			testhelper.RequireEqual(t, expectedResources, resources)
+			testhelper.RequireEqual(t, expectedResources, rp.Resources)
 		} else {
 			for _, expRes := range expectedResources {
-				require.Contains(t, resources, expRes)
+				require.Contains(t, rp.Resources, expRes)
 			}
 		}
 	}
 }
 
-func (ft *findTest) testGetContext(r *DBrepository) func(*testing.T) {
+func (ft *findTest) testGetContext(r *DBrepository[*Resource]) func(*testing.T) {
 	return func(t *testing.T) {
 		// ARRANGE
-		expectedResources := ft.expected.Resources.([]*Resource)
+		expectedResources := ft.expected.Resources
 		require.EqualValues(t, 1, ft.expected.Total, "Total must be 1.")
 		require.EqualValues(t, len(expectedResources), ft.expected.Total, "Expected Total and Resources doesn't match.")
 
 		// ACT
+		var resource Resource
 		query := "SELECT id, name, random_number as RandomNumber FROM resources"
-		var resources Resource
-
-		err := r.GetContext(context.Background(), r.GetDBInstance(), &resources, query, ft.filters)
+		actual, err := r.GetContext(context.Background(), r.GetDBInstance(), &resource, query, ft.filters)
 
 		// ASSERT
 		require.NoError(t, err)
-		testhelper.RequireEqual(t, *expectedResources[0], resources)
+		testhelper.RequireEqual(t, *expectedResources[0], resource)
+		testhelper.RequireEqual(t, *expectedResources[0], actual)
 	}
 }
 
-func save(ctx context.Context, r *DBrepository, res *Resource) error {
+func save(ctx context.Context, r *DBrepository[*Resource], res *Resource) error {
 	tx := r.GetTransaction(ctx)
 	result, err := tx.NamedExec("INSERT INTO resources (id, name, random_number) VALUES (:id, :name, :randomnumber);", res)
 	return r.HandleSaveOrUpdateError(result, err)
 }
 
-func findByID(r *DBrepository, id string, dst *Resource) error {
+func findByID(r *DBrepository[*Resource], id string, dst *Resource) error {
 	err := r.db.db.Get(dst, "SELECT id, name, random_number as RandomNumber FROM resources WHERE id=$1", id)
 	return r.HandleSearchError(err)
 }
 
-func findList(r *DBrepository, dst *[]*Resource, limit, offset string) error {
+func findList(r *DBrepository[*Resource], dst *[]*Resource, limit, offset string) error {
 	query := "SELECT id, name, random_number as RandomNumber FROM resources"
 	query, _, err := filters.ApplyLimit(query, limit)
 	if err != nil {

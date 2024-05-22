@@ -6,27 +6,27 @@ import (
 	"gorm.io/gorm"
 )
 
-type TextFieldFilter struct {
+type TextFieldFilter[T any] struct {
 	field string
 }
 
-func TextField(field string) *TextFieldFilter {
-	return &TextFieldFilter{
+func TextField[T any](field string) *TextFieldFilter[T] {
+	return &TextFieldFilter[T]{
 		field: field,
 	}
 }
 
-func (f *TextFieldFilter) Apply(db *gorm.DB, values []string, _ *udatabase.ResourcePage) (*gorm.DB, error) {
+func (f *TextFieldFilter[T]) Apply(db *gorm.DB, values []string, _ *udatabase.ResourcePage[T]) (*gorm.DB, error) {
 	return f.textField(db, values)
 }
 
-func (f *TextFieldFilter) ValuedFilterFunc(values ...string) ValuedFilter {
-	return func(db *gorm.DB, _ *udatabase.ResourcePage) (*gorm.DB, error) {
+func (f *TextFieldFilter[T]) ValuedFilterFunc(values ...string) ValuedFilter[T] {
+	return func(db *gorm.DB, _ *udatabase.ResourcePage[T]) (*gorm.DB, error) {
 		return f.textField(db, values)
 	}
 }
 
-func (f *TextFieldFilter) textField(db *gorm.DB, values []string) (*gorm.DB, error) {
+func (f *TextFieldFilter[T]) textField(db *gorm.DB, values []string) (*gorm.DB, error) {
 	query, args, err := filters.ApplyTextField(f.field, values...)
 	if err != nil {
 		return nil, err
