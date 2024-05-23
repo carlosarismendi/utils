@@ -22,7 +22,7 @@ This package provides a HTTP type to make http request.
 //    r.Send(Get("https://catfact.ninja"))
 //    r.Send(Get("https://google.com"))
 r := NewRequester(
-    URL("https://catfact.ninja"),
+URL("https://catfact.ninja"),
 )
 
 // Send a request with method GET to path /fact.
@@ -36,8 +36,8 @@ r := NewRequester(
 resp, body, err := r.Send(Get("/fact"))
 
 type CatFact struct {
-    Fact   string `json:"fact"`
-    Length int    `json:"length"`
+Fact   string `json:"fact"`
+Length int    `json:"length"`
 }
 var cf CatFact
 // If you pass a reference to an object as first parameter, the
@@ -47,22 +47,24 @@ resp, body, err := r.Send(&cf, Get("/fact"))
 
 // It is possible to pass multiple options in a single call.
 resp, body, err := r.Send(&cf,
-    Get("/api"),
-    ContentType("application/json"),
+Get("/api"),
+ContentType("application/json"),
 )
 ```
 
 ## Options
 
 | Option          | Description                                                                                                              | Example                                       |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------- |
+|-----------------|--------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------|
 | `AppendPath`    | Appends a path to the current path and url.                                                                              | `AppendPath("/api/user")`                     |
 | `Authorization` | Sets the HTTP header Authorization.                                                                                      | `Authorization("Bearer <token>")`             |
 | `Body`          | Sets the request body. Currently only marshalls body into json <br> by using `json.Encoder(...)` from `"encoding/json"`. | `Body(<an struct type object>)`               |
 | `ContentType`   | Sets the HTTP header Content-Type.                                                                                       | `ContentType("application/json")`             |
+| `Delete`        | Sets the HTTP method DELETE.                                                                                             | `Delete("/api/user"))`                        |
 | `Doer`          | Sets the HTTP client. Default is `http.DefaultClient` from `"net/http"`.                                                 | `Doer(http.DefaultClient)`                    |
 | `Get`           | Sets the HTTP method GET.                                                                                                | `Get("/api/user"))`                           |
 | `Header`        | Sets an HTTP header. Overwrites previous values for the given key.                                                       | `Header("Content-Type", "application/json"))` |
+| `Method`        | Sets the HTTP method.                                                                                                    | `Get("POST", "/api/user"))`                   |
 | `Post`          | Sets the HTTP method POST.                                                                                               | `Post("/api/user"))`                          |
 | `Put`           | Sets the HTTP method PUT.                                                                                                | `Put("/api/user"))`                           |
 | `Patch`         | Sets the HTTP method PATCH.                                                                                              | `Patch("/api/user"))`                         |
@@ -70,4 +72,5 @@ resp, body, err := r.Send(&cf,
 | `QueryParams`   | Appends multiple query parameters to the path.                                                                           | `QueryParams(url.Values{})`                   |
 | `URL`           | Sets the base URL.                                                                                                       | `URL("https://catfact.ninja")`                |
 
-**NOTE** Options will be processed sequentially from left to right, so in case of conflicting options (e.g. a `Post` after a `Get`, both path defined in both options will be considered but the used method will be POST).
+**NOTE** Options will be processed sequentially from left to right, so in case of conflicting options (e.g. a `Post`
+after a `Get`, both path defined in both options will be considered but the used method will be POST).

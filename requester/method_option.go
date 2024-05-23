@@ -19,6 +19,10 @@ func (o *MethodOption) Apply(req *HTTPRequester) {
 	req.path = o.path
 }
 
+func Method(method, path string) *MethodOption {
+	return newMethodOption(method, path)
+}
+
 func Get(path string) *MethodOption {
 	return newMethodOption(http.MethodGet, path)
 }
@@ -33,4 +37,8 @@ func Put(path string) *MethodOption {
 
 func Patch(path string) *MethodOption {
 	return newMethodOption(http.MethodPatch, path)
+}
+
+func Delete(path string) *MethodOption {
+	return newMethodOption(http.MethodDelete, path)
 }
