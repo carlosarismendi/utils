@@ -92,3 +92,15 @@ func (r *HTTPRequester) clone() *HTTPRequester {
 	clone.headers = r.headers.Clone()
 	return &clone
 }
+
+func Send(dst interface{}, options ...Option) (*http.Response, []byte, error) {
+	return NewRequester().Send(dst, options...)
+}
+
+func CloseBody(response *http.Response) {
+	if response == nil || response.Body == nil || response.Body == http.NoBody {
+		return
+	}
+
+	_ = response.Body.Close()
+}
