@@ -263,8 +263,10 @@ func (r *DBrepository[T]) HandleSaveOrUpdateError(err error) error {
 		pqErr = &pq.Error{Code: pq.ErrorCode(v.Code)}
 	}
 
-	if rErr, ok := udatabase.PqErrors[pqErr.Code.Name()]; ok {
-		return rErr.WithCause(err)
+	if pqErr != nil {
+		if rErr, ok := udatabase.PqErrors[pqErr.Code.Name()]; ok {
+			return rErr.WithCause(err)
+		}
 	}
 
 	return uerr.NewError(uerr.GenericError, "Error saving or updating resource.").WithCause(err)
