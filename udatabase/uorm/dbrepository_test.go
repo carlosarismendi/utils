@@ -16,11 +16,12 @@ type Resource struct {
 	ID           string
 	Name         string
 	RandomNumber int
+	RandomBool   bool
 }
 
 func createResourceTable(t testing.TB, r *DBrepository[*Resource]) {
 	err := r.GetDBInstance(context.Background()).
-		Exec("CREATE TABLE resources (id UUID PRIMARY KEY, name TEXT, random_number INTEGER);").Error
+		Exec("CREATE TABLE resources (id UUID PRIMARY KEY, name TEXT, random_number INTEGER, random_bool BOOLEAN);").Error
 	require.NoError(t, err)
 }
 
@@ -187,6 +188,7 @@ func TestFindWithFilters(t *testing.T) {
 		"id":            uormFilters.TextField[*Resource]("id"),
 		"name":          uormFilters.TextField[*Resource]("name"),
 		"random_number": uormFilters.NumField[*Resource]("random_number"),
+		"random_bool":   uormFilters.BoolField[*Resource]("random_bool"),
 		"sort":          uormFilters.Sorter[*Resource]("name", "random_number"),
 	}
 
@@ -259,6 +261,28 @@ func TestFindWithFilters(t *testing.T) {
 				Limit:     10,
 				Offset:    0,
 				Resources: []*Resource{r3},
+			},
+			considerOrder: false,
+		},
+		{
+			name:    "FindingFilteringBoolFieldWithTrue",
+			filters: createFilters(newFilter("random_bool", "true")),
+			expected: &udatabase.ResourcePage[*Resource]{
+				Total:     2,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r1, r3},
+			},
+			considerOrder: false,
+		},
+		{
+			name:    "FindingFilteringBoolFieldWithFalse",
+			filters: createFilters(newFilter("random_bool", "false")),
+			expected: &udatabase.ResourcePage[*Resource]{
+				Total:     2,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r2, r4},
 			},
 			considerOrder: false,
 		},
@@ -277,6 +301,7 @@ func TestFindWithValuedFilters(t *testing.T) {
 		"id":            uormFilters.TextField[*Resource]("id"),
 		"name":          uormFilters.TextField[*Resource]("name"),
 		"random_number": uormFilters.NumField[*Resource]("random_number"),
+		"random_bool":   uormFilters.BoolField[*Resource]("random_bool"),
 		"sort":          uormFilters.Sorter[*Resource]("name", "random_number"),
 	}
 
@@ -349,6 +374,28 @@ func TestFindWithValuedFilters(t *testing.T) {
 				Limit:     10,
 				Offset:    0,
 				Resources: []*Resource{r3},
+			},
+			considerOrder: false,
+		},
+		{
+			name:    "FindingFilteringBoolFieldWithTrue",
+			filters: createFilters(newFilter("random_bool", "true")),
+			expected: &udatabase.ResourcePage[*Resource]{
+				Total:     2,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r1, r3},
+			},
+			considerOrder: false,
+		},
+		{
+			name:    "FindingFilteringBoolFieldWithFalse",
+			filters: createFilters(newFilter("random_bool", "false")),
+			expected: &udatabase.ResourcePage[*Resource]{
+				Total:     2,
+				Limit:     10,
+				Offset:    0,
+				Resources: []*Resource{r2, r4},
 			},
 			considerOrder: false,
 		},
@@ -482,6 +529,7 @@ func populateDB(ctx context.Context, t testing.TB, r *DBrepository[*Resource]) (
 		ID:           "5ceff18d-9039-44b5-a5d3-3d99653f4601",
 		Name:         "Resource1",
 		RandomNumber: 1,
+		RandomBool:   true,
 	}
 	require.NoError(t, r.Save(ctx, r1))
 
@@ -496,6 +544,7 @@ func populateDB(ctx context.Context, t testing.TB, r *DBrepository[*Resource]) (
 		ID:           "5ceff18d-9039-44b5-a5d3-3d99653f4603",
 		Name:         "Resource3",
 		RandomNumber: 2,
+		RandomBool:   true,
 	}
 	require.NoError(t, r.Save(ctx, r3))
 
