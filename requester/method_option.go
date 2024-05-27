@@ -16,7 +16,7 @@ func newMethodOption(method, path string) *MethodOption {
 
 func (o *MethodOption) Apply(req *HTTPRequester) {
 	req.method = o.method
-	req.path = o.path
+	AppendPath(o.path).Apply(req)
 }
 
 func Method(method, path string) *MethodOption {
