@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/carlosarismendi/utils/testhelper"
+	"github.com/carlosarismendi/testhelper"
 	"github.com/carlosarismendi/utils/udatabase"
 	"github.com/carlosarismendi/utils/udatabase/filters"
 	usqlFilters "github.com/carlosarismendi/utils/udatabase/usql/filters"

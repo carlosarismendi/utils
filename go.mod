@@ -1,6 +1,6 @@
 module github.com/carlosarismendi/utils
 
-go 1.22
+go 1.23.11
 
 require (
 	github.com/go-playground/validator/v10 v10.20.0
@@ -10,12 +10,13 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/joho/godotenv v1.5.1
 	github.com/nats-io/nats.go v1.35.0
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	gorm.io/driver/postgres v1.5.7
 	gorm.io/gorm v1.25.10
 )
 
 require (
+	github.com/carlosarismendi/testhelper v1.0.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/klauspost/compress v1.17.8 // indirect
